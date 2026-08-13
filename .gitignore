@@ -1,0 +1,41 @@
+# Build directories
+build/
+out/
+cmake-build-*/
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+
+# Compiled objects / binaries
+*.o
+*.obj
+*.so
+*.a
+*.exe
+*.out
+
+# CUDA-specific
+*.ptx
+*.cubin
+*.fatbin
+
+# Runtime output — keep the directory, not generated results
+results/*.json
+results/*.csv
+!results/.gitkeep
+
+# Editor / OS cruft
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Compiler / debug artifacts
+*.d
+*.dSYM/
+core
