@@ -16,6 +16,7 @@ struct BenchmarkResult{
     Paradigm paradigm; 
     int problem_size;
     int iterations;
+    int number_of_processors;
 
     //compulsory fields;
     double wall_time_ms;

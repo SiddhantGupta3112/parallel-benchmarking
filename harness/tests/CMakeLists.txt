@@ -2,7 +2,13 @@ add_executable(
     harness_tests
     test_benchmark_result.cpp
     test_registrar.cpp
+    test_derived_metrics.cpp
+    test_cpu_metrics.cpp
+    test_timer.cpp
     ../src/registrar.cpp
+    ../src/derived_metrics.cpp
+    ../src/cpu_metrics.cpp
+    ../src/scoped_timer.cpp
 )
 
 target_include_directories(
