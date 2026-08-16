@@ -5,10 +5,12 @@ add_executable(
     test_derived_metrics.cpp
     test_cpu_metrics.cpp
     test_timer.cpp
+    test_live_monitor.cpp
     ../src/registrar.cpp
     ../src/derived_metrics.cpp
     ../src/cpu_metrics.cpp
     ../src/scoped_timer.cpp
+    ../src/live_monitor.cpp
 )
 
 target_include_directories(

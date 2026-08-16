@@ -30,8 +30,24 @@ void collect_gpu_utilization_metrics(BenchmarkResult& result) {
         result.gpu_utilization_pct = static_cast<double>(utilization.gpu);
     }
 
-    nvmlMemory_t memory;
-    if (nvmlDeviceGetMemoryInfo(device, &memory) == NVML_SUCCESS) {
-        result.gpu_memory_used_mb = static_cast<double>(memory.used) / (1024.0 * 1024.0);
+}
+
+double read_current_gpu_memory_mb() {
+    ensure_nvml_initialized();
+
+    nvmlDevice_t device;
+    if (nvmlDeviceGetHandleByIndex(0, &device) != NVML_SUCCESS) {
+        return 0.0;
     }
+
+    nvmlMemory_t memory;
+    if (nvmlDeviceGetMemoryInfo(device, &memory) != NVML_SUCCESS) {
+        return 0.0;
+    }
+
+    return static_cast<double>(memory.used) / (1024.0 * 1024.0);
+}
+
+void ensure_nvml_initialized(){
+    get_nvml_session();
 }
