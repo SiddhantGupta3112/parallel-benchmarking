@@ -1,4 +1,5 @@
 #include "cuda_metrics.h"
+#include <nvml.h>
 
 class NvmlSession {
 public:

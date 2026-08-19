@@ -6,23 +6,13 @@ add_executable(
     test_cpu_metrics.cpp
     test_timer.cpp
     test_live_monitor.cpp
-    ../src/registrar.cpp
-    ../src/derived_metrics.cpp
-    ../src/cpu_metrics.cpp
-    ../src/scoped_timer.cpp
-    ../src/live_monitor.cpp
-)
-
-target_include_directories(
-    harness_tests
-    PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include
-    ${CMAKE_CURRENT_SOURCE_DIR}/../src
+    test_runner.cpp
 )
 
 target_link_libraries(
     harness_tests
     PRIVATE
+    harness
     Catch2::Catch2WithMain
 )
 

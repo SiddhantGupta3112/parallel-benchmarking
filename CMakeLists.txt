@@ -14,4 +14,12 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(Catch2)
 
+find_package(OpenMP REQUIRED)
+find_package(MPI REQUIRED)
+
+enable_language(CUDA)
+
+find_package(CUDAToolkit REQUIRED)
+add_subdirectory(harness)
+
 add_subdirectory(harness/tests)
