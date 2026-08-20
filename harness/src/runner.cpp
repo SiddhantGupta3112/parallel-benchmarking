@@ -2,12 +2,14 @@
 #include "stdexcept"
 #include <unordered_map>
 #include "cpu_metrics.h"
-#include "cuda_metrics.h"
 #include "scoped_timer.h"
-#include "cuda_metrics.h"
 #include "derived_metrics.h"
 #include "live_monitor.h"
 #include "runner.h"
+
+#ifdef HAS_CUDA
+#include "cuda_metrics.h"
+#endif
 
 std::unordered_map<std::string, RegisteredBenchmark> get_serial_benchmarks(Registry& registry){
     std::vector<RegisteredBenchmark>& benchmarks = registry.access_registered_benchmarks();
@@ -62,6 +64,8 @@ std::unordered_map<std::string, BenchmarkResult> run_serial_benchmarks(Registry&
         result.peak_rss_kb = cpu_metrics.get_peak_rss_kb();
         result.cpu_time_ms = cpu_metrics.get_cpu_time_ms();
 
+        compute_achieved_metrics(result, context.flop_count, context.bytes_moved);
+
         serial_results[benchmark_name] = result;
     }
 
@@ -89,11 +93,20 @@ std::vector<BenchmarkResult> run_non_serial_benchmarks(std::unordered_map<std::s
 
         Timer timer;
         CpuMetrics cpu_metrics;
-        LiveMonitor monitor;
+        
 
-        if(benchmark.paradigm == Paradigm::CUDA){
-            monitor.start();
-        }
+        #ifdef HAS_CUDA
+            LiveMonitor monitor;
+            if (benchmark.paradigm == Paradigm::CUDA) {
+                monitor.start();
+            }
+            #else
+            if (benchmark.paradigm == Paradigm::CUDA) {
+                throw std::runtime_error(
+                    "CUDA benchmark requested, but CUDA support is disabled"
+                );
+            }
+        #endif
         cpu_metrics.start();
         timer.start();
 
@@ -101,11 +114,18 @@ std::vector<BenchmarkResult> run_non_serial_benchmarks(std::unordered_map<std::s
 
         timer.stop();
         cpu_metrics.stop();
-        if(benchmark.paradigm == Paradigm::CUDA){
-            monitor.stop();
-        }
 
         BenchmarkResult result;
+        #ifdef HAS_CUDA
+        if (benchmark.paradigm == Paradigm::CUDA) {
+            monitor.stop();
+            monitor.populate(result);
+            collect_gpu_utilization_metrics(result);
+            result.gpu_memory_used_mb = read_current_gpu_memory_mb();
+        }
+        #endif
+        
+        
         result.name = benchmark.name;
         result.paradigm = benchmark.paradigm;
         result.number_of_processors = context.number_of_processors;
@@ -116,12 +136,11 @@ std::vector<BenchmarkResult> run_non_serial_benchmarks(std::unordered_map<std::s
         result.peak_rss_kb = cpu_metrics.get_peak_rss_kb();
         result.cpu_time_ms = cpu_metrics.get_cpu_time_ms();
 
+        compute_achieved_metrics(result, context.flop_count, context.bytes_moved);
         compute_derived_metrics(result, serial_benchmark, context.flop_count, context.bytes_moved);
+        
 
-        if(benchmark.paradigm == Paradigm::CUDA){
-            monitor.populate(result);
-            collect_gpu_utilization_metrics(result);
-        }
+        
 
         non_serial_benchmark_results.push_back(result);
     }

@@ -19,13 +19,13 @@ struct BenchmarkResult{
     int number_of_processors;
 
     //compulsory fields;
-    double wall_time_ms;
-    double speedup;
-    double efficiency;
-    double achieved_flops;
-    double arithmetic_intensity;
-    double cpu_time_ms;
-    long peak_rss_kb;
+    double wall_time_ms = 0.0;
+    double speedup = 0.0;
+    double efficiency = 0.0;
+    double achieved_flops = 0.0;
+    double arithmetic_intensity = 0.0;
+    double cpu_time_ms = 0.0;
+    long peak_rss_kb = 0;
 
     //optional fields;
     std::optional<double> gpu_utilization_pct;
