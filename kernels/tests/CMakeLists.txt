@@ -1,7 +1,8 @@
 add_executable(
     kernel_tests
     test_serial_monte_carlo.cpp
-    test_matrix_multiply.cpp
+    test_serial_matrix_multiply.cpp
+    test_serial_stencil.cpp
 )
 
 target_link_libraries(
