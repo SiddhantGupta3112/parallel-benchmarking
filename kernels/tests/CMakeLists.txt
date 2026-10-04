@@ -12,5 +12,10 @@ target_link_libraries(
     Catch2::Catch2WithMain
 )
 
+if(HAS_CUDA)
+    target_sources(kernel_tests PRIVATE test_cuda_monte_carlo.cpp)
+    target_link_libraries(kernel_tests PRIVATE cuda_kernels)
+endif()
+
 include(Catch)
 catch_discover_tests(kernel_tests)

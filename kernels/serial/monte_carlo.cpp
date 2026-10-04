@@ -1,7 +1,7 @@
 #include <random>
 
 #include "monte_carlo.h"
-
+#include "registrar.h"
 
 double monte_carlo(BenchmarkContext &ctx, int N){
     ctx.problem_size = N;
@@ -28,6 +28,23 @@ double monte_carlo(BenchmarkContext &ctx, int N){
     ctx.flop_count = 3 * N;
     ctx.bytes_moved = 2.0 * N * sizeof(double);
     return pi;
-
-
 }
+
+BENCHMARK_TEST(monte_carlo_serial_n10000, monte_carlo_n10000, Paradigm::Serial) {
+    monte_carlo(ctx, 10'000);
+}
+
+BENCHMARK_TEST(monte_carlo_serial_n100000, monte_carlo_n100000, Paradigm::Serial) {
+    monte_carlo(ctx, 100'000);
+}
+
+BENCHMARK_TEST(monte_carlo_serial_n1000000, monte_carlo_n1000000, Paradigm::Serial) {
+    monte_carlo(ctx, 1'000'000);
+}
+
+BENCHMARK_TEST(monte_carlo_serial_n10000000, monte_carlo_n10000000, Paradigm::Serial) {
+    monte_carlo(ctx, 10'000'000);
+}
+
+
+
