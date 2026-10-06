@@ -1,7 +1,6 @@
 #include <cuda_runtime.h>
 #include <curand_kernel.h>
-#include <algorithm>
-#include <stdexcept>
+#include "helper.h"
 #include "registrar.h"
 #include "cuda_monte_carlo.h"
 # define THREADS_PER_BLOCK 256
@@ -22,24 +21,6 @@ __global__ void monte_carlo_kernel(unsigned long long seed, int N, int *count_in
     }
 }
 
-int get_number_of_processors(int thread_count) {
-    int count = 0;
-    cudaGetDeviceCount(&count);
-
-    if (count == 0) {
-        throw std::runtime_error("No CUDA Device found"); 
-    }
-
-    int current_device = 0;
-    cudaGetDevice(&current_device);
-
-    cudaDeviceProp prop;
-    cudaGetDeviceProperties(&prop, current_device);
-
-    int max_hardware_threads = prop.multiProcessorCount * prop.maxThreadsPerMultiProcessor;
-
-    return std::min(thread_count, max_hardware_threads);
-}
 
 double monte_carlo_cuda(BenchmarkContext &ctx, int N){
     ctx.problem_size = N;
