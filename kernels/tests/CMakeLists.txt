@@ -16,6 +16,7 @@ if(HAS_CUDA)
     target_sources(kernel_tests PRIVATE 
     test_cuda_monte_carlo.cpp
     test_cuda_matrix_multiply.cpp
+    test_cuda_stencil.cpp
     )
     target_link_libraries(kernel_tests PRIVATE cuda_kernels)
 endif()

@@ -28,6 +28,21 @@ std::vector<double> stencil(
     std::vector<double> current = input;
     std::vector<double> next(rows * cols, 0.0);
 
+    for (int j = 0; j < cols; ++j) {
+        next[j] = current[j];
+
+        next[(rows - 1) * cols + j] =
+            current[(rows - 1) * cols + j];
+    }
+
+    for (int i = 0; i < rows; ++i) {
+        next[i * cols] =
+            current[i * cols];
+
+        next[i * cols + (cols - 1)] =
+            current[i * cols + (cols - 1)];
+    }
+
     for (int iter = 0; iter < iterations; ++iter) {
 
         for (int i = 1; i < rows - 1; ++i) {
@@ -41,21 +56,6 @@ std::vector<double> stencil(
                         current[i * cols + (j + 1)]
                     ) / 4.0;
             }
-        }
-
-        for (int j = 0; j < cols; ++j) {
-            next[j] = current[j];
-
-            next[(rows - 1) * cols + j] =
-                current[(rows - 1) * cols + j];
-        }
-
-        for (int i = 0; i < rows; ++i) {
-            next[i * cols] =
-                current[i * cols];
-
-            next[i * cols + (cols - 1)] =
-                current[i * cols + (cols - 1)];
         }
 
         current.swap(next);
