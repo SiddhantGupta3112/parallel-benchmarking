@@ -3,12 +3,14 @@ add_executable(
     test_serial_monte_carlo.cpp
     test_serial_matrix_multiply.cpp
     test_serial_stencil.cpp
+    test_build_matrix_helper.cpp
 )
 
 target_link_libraries(
     kernel_tests
     PRIVATE
     serial_kernels
+    helper
     Catch2::Catch2WithMain
 )
 

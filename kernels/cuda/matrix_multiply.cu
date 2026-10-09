@@ -1,7 +1,7 @@
 #include <cuda_runtime.h>
 #include "registrar.h"
 #include "cuda_matrix_multiply.h"
-#include "helper.h"
+#include "cuda_helper.h"
 
 __global__ void matrix_muliply_kernel(double *A, double *B, double *C, int r1, int c1, int r2, int c2){
     int tid_x = blockDim.x * blockIdx.x + threadIdx.x;

@@ -1,6 +1,6 @@
 #include <cuda_runtime.h>
 #include <curand_kernel.h>
-#include "helper.h"
+#include "cuda_helper.h"
 #include "registrar.h"
 #include "cuda_monte_carlo.h"
 # define THREADS_PER_BLOCK 256

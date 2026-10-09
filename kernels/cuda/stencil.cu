@@ -2,9 +2,9 @@
 #include <stdexcept>
 #include <vector>
 
-#include "helper.h"
+#include "cuda_helper.h"
 #include "registrar.h"
-#include "stencil.h"
+#include "cuda_stencil.h"
 
 __global__ void stencil_kernel(double *A, double *B, int r, int c){
     int tid_x = blockDim.x * blockIdx.x + threadIdx.x;

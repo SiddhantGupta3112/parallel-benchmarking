@@ -1,7 +1,7 @@
 add_library(cuda_kernels OBJECT
     matrix_multiply.cu
     monte_carlo.cu
-    helper.cu
+    cuda_helper.cu
     stencil.cu
 )
 

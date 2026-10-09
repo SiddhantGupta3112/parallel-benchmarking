@@ -1,4 +1,4 @@
-#include "helper.h"
+#include "cuda_helper.h"
 #include<cuda_runtime.h>
 
 int get_number_of_processors(int thread_count) {
