@@ -1,8 +1,11 @@
 #include <cuda_runtime.h>
 #include <curand_kernel.h>
+#include <stdexcept>
+
 #include "cuda_helper.h"
 #include "registrar.h"
 #include "cuda_monte_carlo.h"
+
 # define THREADS_PER_BLOCK 256
 
 __global__ void monte_carlo_kernel(unsigned long long seed, int N, int *count_inside_circle){
@@ -23,6 +26,10 @@ __global__ void monte_carlo_kernel(unsigned long long seed, int N, int *count_in
 
 
 double monte_carlo_cuda(BenchmarkContext &ctx, int N){
+    if(N <= 0){
+        throw std::invalid_argument("N must be a positive integer.");
+    }
+    
     ctx.problem_size = N;
     ctx.iterations = 1;
     ctx.number_of_processors = get_number_of_processors(N);
@@ -30,25 +37,45 @@ double monte_carlo_cuda(BenchmarkContext &ctx, int N){
     int blocks_per_grid = (N + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
 
     int h_count_inside_circle = 0;
-    int *d_count_inside_circle;
+    int *d_count_inside_circle = nullptr;
 
-    cudaMalloc((void**)&d_count_inside_circle, sizeof(int));
-    cudaMemset(d_count_inside_circle, 0, sizeof(int));
+    try{
+        cuda_check(cudaMalloc((void**)&d_count_inside_circle, sizeof(int)), "Failed to allocate device memory for count inside circle");
+        cuda_check(cudaMemset(d_count_inside_circle, 0, sizeof(int)), "Failed to initialize device memory for count inside circle");
 
-    unsigned long long seed = 12345ULL;
-    monte_carlo_kernel<<<blocks_per_grid, THREADS_PER_BLOCK>>>(seed, N, d_count_inside_circle);
-    cudaDeviceSynchronize();
+        unsigned long long seed = 12345ULL;
+        monte_carlo_kernel<<<blocks_per_grid, THREADS_PER_BLOCK>>>(seed, N, d_count_inside_circle);
+        cuda_check(cudaGetLastError(), "Monte Carlo kernel launch failed");
 
-    cudaMemcpy(&h_count_inside_circle, d_count_inside_circle, sizeof(int), cudaMemcpyDeviceToHost);
+        cuda_check(cudaDeviceSynchronize(), "Failed to synchronize device");
 
-    double pi = static_cast<double>(h_count_inside_circle) / N * 4.0;  
+        cuda_check(
+            cudaMemcpy(
+                &h_count_inside_circle,
+                d_count_inside_circle,
+                sizeof(int),
+                cudaMemcpyDeviceToHost),
+            "Failed to copy count inside circle from device"
+        );
 
-    ctx.flop_count = 3 * N;
-    ctx.bytes_moved = 2.0 * N * sizeof(float);
+        double pi = static_cast<double>(h_count_inside_circle) / N * 4.0;  
 
-    cudaFree(d_count_inside_circle);
-    return pi;
+        ctx.flop_count = 3 * N;
+        ctx.bytes_moved = 2.0 * N * sizeof(float);
+
+        cuda_check(cudaFree(d_count_inside_circle), "Failed to free device memory for count inside circle");
+        d_count_inside_circle = nullptr;
+        return pi;
+    }
+    catch(...){
+        if(d_count_inside_circle){
+            cudaFree(d_count_inside_circle);
+        }
+
+        throw;
+    }
 }
+
 
 BENCHMARK_TEST(monte_carlo_cuda_n10000, monte_carlo_n10000, Paradigm::CUDA) {
     monte_carlo_cuda(ctx, 10'000);

@@ -7,6 +7,7 @@ add_executable(
     test_timer.cpp
     test_live_monitor.cpp
     test_runner.cpp
+    test_measurement_hooks.cpp
 )
 
 target_link_libraries(

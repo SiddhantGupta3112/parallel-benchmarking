@@ -5,7 +5,6 @@
 #include <vector>
 
 std::vector<double> cuda_matrix_multiply(
-    BenchmarkContext &ctx,
     const std::vector<double>& A,
     const std::vector<double>& B,
     int r1,

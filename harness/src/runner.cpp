@@ -11,6 +11,16 @@
 #include "cuda_metrics.h"
 #endif
 
+void start_measurement_helper(Timer& timer, CpuMetrics& cpu_metrics){
+    timer.start();
+    cpu_metrics.start();
+}
+
+void stop_measurement_helper(Timer& timer, CpuMetrics& cpu_metrics){
+    timer.stop();
+    cpu_metrics.stop();
+}
+
 std::unordered_map<std::string, RegisteredBenchmark> get_serial_benchmarks(Registry& registry){
     std::vector<RegisteredBenchmark>& benchmarks = registry.access_registered_benchmarks();
 
@@ -45,13 +55,19 @@ std::unordered_map<std::string, BenchmarkResult> run_serial_benchmarks(Registry&
         Timer timer;
         CpuMetrics cpu_metrics;
 
-        cpu_metrics.start();
-        timer.start();
+        context.assign_measurement_functions(
+            [&]() { start_measurement_helper(timer, cpu_metrics); },
+            [&]() { stop_measurement_helper(timer, cpu_metrics); }
+        );
+
+        context.start_measurement();
+        
 
         benchmark.callable(context);
 
-        timer.stop();
-        cpu_metrics.stop();
+        
+        context.stop_measurement();
+        
 
         BenchmarkResult result;
         result.name = benchmark.name;
@@ -107,21 +123,35 @@ std::vector<BenchmarkResult> run_non_serial_benchmarks(std::unordered_map<std::s
                 );
             }
         #endif
-        cpu_metrics.start();
-        timer.start();
+    
+
+        context.assign_measurement_functions(
+            [&]() {
+                start_measurement_helper(timer, cpu_metrics);
+            },
+            [&]() {
+                stop_measurement_helper(timer, cpu_metrics);
+                #ifdef HAS_CUDA
+                    if (!context.is_measurement_stopped() &&
+                        benchmark.paradigm == Paradigm::CUDA) {
+                        monitor.stop();
+                    }
+                #endif
+                
+            }
+        );
+
+        context.start_measurement();
 
         benchmark.callable(context);
 
-        timer.stop();
-        cpu_metrics.stop();
+        context.stop_measurement();
 
         BenchmarkResult result;
         #ifdef HAS_CUDA
         if (benchmark.paradigm == Paradigm::CUDA) {
-            monitor.stop();
             monitor.populate(result);
             collect_gpu_utilization_metrics(result);
-            result.gpu_memory_used_mb = read_current_gpu_memory_mb();
         }
         #endif
         
@@ -139,9 +169,6 @@ std::vector<BenchmarkResult> run_non_serial_benchmarks(std::unordered_map<std::s
         compute_achieved_metrics(result, context.flop_count, context.bytes_moved);
         compute_derived_metrics(result, serial_benchmark, context.flop_count, context.bytes_moved);
         
-
-        
-
         non_serial_benchmark_results.push_back(result);
     }
 

@@ -5,6 +5,8 @@
 #include "cuda_helper.h"
 #include "registrar.h"
 #include "cuda_stencil.h"
+#include "build_stencil_input.h"
+#include "seed_values.h"
 
 __global__ void stencil_kernel(double *A, double *B, int r, int c){
     int tid_x = blockDim.x * blockIdx.x + threadIdx.x;
@@ -21,7 +23,6 @@ __global__ void stencil_kernel(double *A, double *B, int r, int c){
 }
 
 std::vector<double> cuda_stencil(
-    BenchmarkContext& ctx,
     const std::vector<double>& h_A,
     int r,
     int c,
@@ -35,21 +36,23 @@ std::vector<double> cuda_stencil(
         throw std::runtime_error("Iterations cannot be negative");
     }
 
-    if (h_A.size() != static_cast<std::size_t>(r * c)) {
+    const std::size_t total_elements =
+        static_cast<std::size_t>(r) * static_cast<std::size_t>(c);
+
+    if (h_A.size() != total_elements) {
         throw std::runtime_error("Matrix dimensions do not match data");
     }
 
-    ctx.iterations = iterations;
-    ctx.problem_size = r * c;
-    ctx.number_of_processors = get_number_of_processors(r * c);
+    const std::size_t size_bytes = sizeof(double) * total_elements;
 
-    dim3 threads_per_block(16, 16); 
+    dim3 threads_per_block(16, 16);
     dim3 blocks_per_grid(
-        (c + threads_per_block.x - 1) / threads_per_block.x, 
-        (r + threads_per_block.y - 1) / threads_per_block.y  
+        (c + threads_per_block.x - 1) / threads_per_block.x,
+        (r + threads_per_block.y - 1) / threads_per_block.y
     );
 
-    std::vector<double> h_B(r * c, 0.0);
+    std::vector<double> h_B(total_elements, 0.0);
+
     if (r >= 3 && c >= 3) {
         for (int j = 0; j < c; ++j) {
             h_B[j] = h_A[j];
@@ -64,31 +67,105 @@ std::vector<double> cuda_stencil(
         h_B = h_A;
     }
 
-    double *d_A, *d_B;
-    size_t size_bytes = sizeof(double) * r * c;
-    
-    cudaMalloc((void**) &d_A, size_bytes);
-    cudaMalloc((void**) &d_B, size_bytes);
+    double* d_A = nullptr;
+    double* d_B = nullptr;
 
-    cudaMemcpy(d_A, h_A.data(), size_bytes, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_B, h_B.data(), size_bytes, cudaMemcpyHostToDevice);
+    try {
+        cuda_check(
+            cudaMalloc(reinterpret_cast<void**>(&d_A), size_bytes),
+            "CUDA Stencil: Failed to allocate device memory for A"
+        );
 
-    for(int i = 0; i < iterations; i++){
-        stencil_kernel<<<blocks_per_grid, threads_per_block>>>(d_A, d_B, r, c);
-        cudaDeviceSynchronize();
-        
-        double *temp = d_A;
-        d_A = d_B;
-        d_B = temp;
+        cuda_check(
+            cudaMalloc(reinterpret_cast<void**>(&d_B), size_bytes),
+            "CUDA Stencil: Failed to allocate device memory for B"
+        );
+
+        cuda_check(
+            cudaMemcpy(d_A, h_A.data(), size_bytes, cudaMemcpyHostToDevice),
+            "CUDA Stencil: Failed to copy A to device"
+        );
+
+        cuda_check(
+            cudaMemcpy(d_B, h_B.data(), size_bytes, cudaMemcpyHostToDevice),
+            "CUDA Stencil: Failed to copy B to device"
+        );
+
+        for (int i = 0; i < iterations; ++i) {
+            stencil_kernel<<<blocks_per_grid, threads_per_block>>>(
+                d_A, d_B, r, c
+            );
+
+            cuda_check(
+                cudaGetLastError(),
+                "CUDA Stencil: Kernel launch failed"
+            );
+
+            cuda_check(
+                cudaDeviceSynchronize(),
+                "CUDA Stencil: Device synchronization failed"
+            );
+
+            double* temp = d_A;
+            d_A = d_B;
+            d_B = temp;
+        }
+
+        cuda_check(
+            cudaMemcpy(h_B.data(), d_A, size_bytes, cudaMemcpyDeviceToHost),
+            "CUDA Stencil: Failed to copy result from device"
+        );
+
+        cuda_check(cudaFree(d_A), "CUDA Stencil: Failed to free device buffer A");
+        d_A = nullptr;
+
+        cuda_check(cudaFree(d_B), "CUDA Stencil: Failed to free device buffer B");
+        d_B = nullptr;
+
+        return h_B;
+    }
+    catch (...) {
+        if (d_A != nullptr) {
+            cudaFree(d_A);
+        }
+
+        if (d_B != nullptr) {
+            cudaFree(d_B);
+        }
+
+        throw;
+    }
+}
+
+std::vector<double> cuda_stencil_wrapper(
+    BenchmarkContext& ctx,
+    int r,
+    int c,
+    int iterations
+){
+    if (r <= 0 || c <= 0) {
+        throw std::runtime_error("Empty matrix");
     }
 
-    cudaMemcpy(h_B.data(), d_A, size_bytes, cudaMemcpyDeviceToHost);
+    if (iterations < 0) {
+        throw std::runtime_error("Iterations cannot be negative");
+    }
 
-    cudaFree(d_A);
-    cudaFree(d_B);
+    ctx.iterations = iterations;
+    ctx.problem_size = r * c;
+    ctx.number_of_processors = get_number_of_processors(r * c);
 
+    std::vector<double> input = std::move(*build_stencil_input(r, c, STENCIL));
+
+    ctx.start_measurement();
+
+    std::vector<double> result = cuda_stencil(input, r, c, iterations);
+
+    ctx.stop_measurement();
+
+    
     ctx.bytes_moved = 2.0 * r * c * sizeof(double) * iterations;
     ctx.flop_count = 4.0 * (r - 2) * (c - 2) * iterations;
 
-    return h_B;
+    return result;
 }

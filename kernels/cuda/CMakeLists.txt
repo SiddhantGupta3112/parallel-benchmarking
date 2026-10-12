@@ -11,4 +11,5 @@ target_link_libraries(
     cuda_kernels
     PUBLIC
         harness
+        helper
 )

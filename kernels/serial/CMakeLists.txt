@@ -9,4 +9,5 @@ target_include_directories(serial_kernels PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(serial_kernels
     PUBLIC
         harness
+        helper
 )

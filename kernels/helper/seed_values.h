@@ -1,0 +1,9 @@
+#ifndef SEED_VALUES_H
+#define SEED_VALUES_H
+
+#define MATRIX_MULTIPLY_A 1234U
+#define MATRIX_MULTIPLY_B 4798U
+
+#define STENCIL 8403U
+
+#endif 

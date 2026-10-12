@@ -5,7 +5,6 @@
 #include <vector>
 
 std::vector<double> cuda_stencil(
-    BenchmarkContext &ctx,
     const std::vector<double>& input,
     int rows,
     int cols,

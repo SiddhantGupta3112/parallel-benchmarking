@@ -1,6 +1,9 @@
 #include "runner.h"
 #include <catch2/catch_test_macros.hpp>
 #include <unordered_map>
+#include <thread>
+#include <chrono>
+#include <cmath> 
 
 TEST_CASE("Error when serial benchmark missing") {
     std::unordered_map<std::string, BenchmarkResult> map;
@@ -113,8 +116,68 @@ TEST_CASE("End-to-end runner smoke test") {
     REQUIRE(parallel_result.cpu_time_ms >= 0.0);
     REQUIRE(parallel_result.peak_rss_kb > 0);
 
+
     REQUIRE(parallel_result.speedup > 0.0);
     REQUIRE(parallel_result.efficiency > 0.0);
     REQUIRE(parallel_result.achieved_flops > 0.0);
     REQUIRE(parallel_result.arithmetic_intensity > 0.0);
+}
+
+TEST_CASE("Restarting measurement excludes setup time") {
+    Registry local_registry;
+
+    local_registry.register_benchmark(
+        "setup_then_measure",
+        "setup_then_measure",
+        Paradigm::Serial,
+        [](BenchmarkContext& ctx) {
+            ctx.problem_size = 1;
+            ctx.iterations = 1;
+            ctx.number_of_processors = 1;
+            ctx.bytes_moved = 100.0;
+
+            std::this_thread::sleep_for(
+                std::chrono::milliseconds(200)
+            );
+
+            ctx.start_measurement(); 
+
+            std::this_thread::sleep_for(
+                std::chrono::milliseconds(100)
+            );
+
+            ctx.stop_measurement();
+        }
+    );
+
+    local_registry.register_benchmark(
+        "measure_without_setup",
+        "measure_without_setup",
+        Paradigm::Serial,
+        [](BenchmarkContext& ctx) {
+            ctx.problem_size = 1;
+            ctx.iterations = 1;
+            ctx.number_of_processors = 1;
+            ctx.bytes_moved = 100.0;
+
+            std::this_thread::sleep_for(
+                std::chrono::milliseconds(100)
+            );
+
+            ctx.stop_measurement();
+        }
+    );
+
+    auto results = run_serial_benchmarks(local_registry);
+
+    const double setup_time =
+        results.at("setup_then_measure").wall_time_ms;
+
+    const double normal_time =
+        results.at("measure_without_setup").wall_time_ms;
+
+    REQUIRE(setup_time < 180.0);
+    REQUIRE(normal_time < 180.0);
+
+    REQUIRE(std::abs(setup_time - normal_time) < 60.0);
 }

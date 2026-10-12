@@ -4,6 +4,7 @@ add_executable(
     test_serial_matrix_multiply.cpp
     test_serial_stencil.cpp
     test_build_matrix_helper.cpp
+    test_build_stencil_input.cpp
 )
 
 target_link_libraries(

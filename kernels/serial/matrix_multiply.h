@@ -5,7 +5,6 @@
 #include "benchmark_context.h"
 
 std::vector<double> matrix_multiply(
-    BenchmarkContext &ctx,
     const std::vector<double>& A,
     const std::vector<double>& B,
     int r1,

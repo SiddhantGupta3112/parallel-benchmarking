@@ -1,9 +1,14 @@
 #include <random>
+#include <stdexcept>
 
 #include "monte_carlo.h"
 #include "registrar.h"
 
 double monte_carlo(BenchmarkContext &ctx, int N){
+    if(N <= 0){
+        throw std::invalid_argument("N must be a positive integer.");
+    }
+    
     ctx.problem_size = N;
     ctx.iterations = 1;
     ctx.number_of_processors = 1;
@@ -29,6 +34,7 @@ double monte_carlo(BenchmarkContext &ctx, int N){
     ctx.bytes_moved = 2.0 * N * sizeof(double);
     return pi;
 }
+
 
 BENCHMARK_TEST(monte_carlo_serial_n10000, monte_carlo_n10000, Paradigm::Serial) {
     monte_carlo(ctx, 10'000);
