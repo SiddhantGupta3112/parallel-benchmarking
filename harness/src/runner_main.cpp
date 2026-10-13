@@ -34,22 +34,40 @@ void merge_benchmarks(
 }
 
 int main() {
+    std::string filename;
     try {
+        filename = generate_file_name();
+        initialize_raw_data_csv(filename);
+
+        std::cout << "Writing Results to: " << filename << "\n";
+
+        auto file_pointer = open_file(filename, std::ios::app);
+
+        ResultSink csv_sink = [&file_pointer](const BenchmarkResult& result) {
+            write_result_row(file_pointer, result);
+            file_pointer.flush();
+
+            if (!file_pointer) {
+                throw std::runtime_error(
+                    "Failed to write result for benchmark: " + result.name
+                );
+            }
+        };
+
+
         std::unordered_map<std::string, BenchmarkResult> serial_benchmarks =
-            run_serial_benchmarks();
+            run_serial_benchmarks(csv_sink);
         std::vector<BenchmarkResult> results =
-            run_non_serial_benchmarks(serial_benchmarks);
+            run_non_serial_benchmarks(serial_benchmarks, csv_sink);
         merge_benchmarks(results, serial_benchmarks);
 
         std::cout << "Serial benchmarks run: " << serial_benchmarks.size() << "\n";
         std::cout << "Total benchmarks run: " << results.size() << "\n";
 
-        std::string filename = generate_file_name();
-        write_csv(filename, results);
-
         std::cout << "Results written to: " << filename << "\n";
     } catch (const std::exception& e) {
         std::cerr << "Fatal error: " << e.what() << "\n";
+        std::cout << "Partial results written to: " << filename << "\n";
         return 1;
     }
     return 0;

@@ -1,11 +1,12 @@
 #include "registrar.h"
-#include "stdexcept"
+#include <stdexcept>
 #include <unordered_map>
 #include "cpu_metrics.h"
 #include "scoped_timer.h"
 #include "derived_metrics.h"
 #include "live_monitor.h"
 #include "runner.h"
+#include "result_writer.h"
 
 #ifdef HAS_CUDA
 #include "cuda_metrics.h"
@@ -43,7 +44,10 @@ std::unordered_map<std::string, RegisteredBenchmark> get_serial_benchmarks(Regis
     return serial_benchmarks;
 }
 
-std::unordered_map<std::string, BenchmarkResult> run_serial_benchmarks(Registry& registry) {
+std::unordered_map<std::string, BenchmarkResult> run_serial_benchmarks(
+    ResultSink result_sink,
+    Registry& registry
+){ 
     std::unordered_map<std::string, RegisteredBenchmark> serial_benchmarks =
         get_serial_benchmarks(registry);
 
@@ -83,13 +87,23 @@ std::unordered_map<std::string, BenchmarkResult> run_serial_benchmarks(Registry&
         compute_achieved_metrics(result, context.flop_count, context.bytes_moved);
 
         serial_results[benchmark_name] = result;
+
+        if (result_sink) {
+            result_sink(result);
+        }
+            
+        
     }
 
     return serial_results;
 }
 
 
-std::vector<BenchmarkResult> run_non_serial_benchmarks(std::unordered_map<std::string, BenchmarkResult> serial_benchmarks, Registry& registry){
+std::vector<BenchmarkResult> run_non_serial_benchmarks(
+    const std::unordered_map<std::string, BenchmarkResult>& serial_benchmarks,
+    ResultSink result_sink,
+    Registry& registry
+){
     std::vector<RegisteredBenchmark>& all_benchmarks = registry.access_registered_benchmarks();
 
     std::vector<BenchmarkResult> non_serial_benchmark_results;
@@ -103,7 +117,7 @@ std::vector<BenchmarkResult> run_non_serial_benchmarks(std::unordered_map<std::s
             throw std::runtime_error("No serial benchamrk found for " + benchmark.kernel_name);
         }
 
-        const BenchmarkResult& serial_benchmark = serial_benchmarks[benchmark.kernel_name];
+        const BenchmarkResult& serial_benchmark = serial_benchmarks.at(benchmark.kernel_name);
 
         BenchmarkContext context;
 
@@ -170,6 +184,10 @@ std::vector<BenchmarkResult> run_non_serial_benchmarks(std::unordered_map<std::s
         compute_derived_metrics(result, serial_benchmark, context.flop_count, context.bytes_moved);
         
         non_serial_benchmark_results.push_back(result);
+        
+        if(result_sink){
+            result_sink(result);
+        }
     }
 
     return non_serial_benchmark_results;

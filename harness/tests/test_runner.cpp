@@ -22,7 +22,7 @@ TEST_CASE("Error when serial benchmark missing") {
         }
     );
 
-    REQUIRE_THROWS_AS(run_non_serial_benchmarks(map, local_registry), std::runtime_error);
+    REQUIRE_THROWS_AS(run_non_serial_benchmarks(map, {}, local_registry), std::runtime_error);
 }
 
 TEST_CASE("Error when no benchamrk registered at all") {
@@ -79,7 +79,7 @@ TEST_CASE("End-to-end runner smoke test") {
         }
     );
 
-    auto serial_results = run_serial_benchmarks(local_registry);
+    auto serial_results = run_serial_benchmarks({}, local_registry);
     
     REQUIRE(serial_results.find(kernel_name) != serial_results.end());
 
@@ -98,7 +98,7 @@ TEST_CASE("End-to-end runner smoke test") {
     REQUIRE(serial_result.peak_rss_kb > 0);
 
     auto parallel_results =
-        run_non_serial_benchmarks(serial_results, local_registry);
+        run_non_serial_benchmarks(serial_results, nullptr, local_registry);
 
     REQUIRE(parallel_results.size() == 1);
 
@@ -168,7 +168,7 @@ TEST_CASE("Restarting measurement excludes setup time") {
         }
     );
 
-    auto results = run_serial_benchmarks(local_registry);
+    auto results = run_serial_benchmarks(nullptr, local_registry);
 
     const double setup_time =
         results.at("setup_then_measure").wall_time_ms;
