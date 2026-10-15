@@ -85,6 +85,9 @@ std::unordered_map<std::string, BenchmarkResult> run_serial_benchmarks(
         result.cpu_time_ms = cpu_metrics.get_cpu_time_ms();
 
         compute_achieved_metrics(result, context.flop_count, context.bytes_moved);
+        
+        result.speedup = 1.0;
+        result.efficiency = 1.0;
 
         serial_results[benchmark_name] = result;
 
@@ -92,7 +95,6 @@ std::unordered_map<std::string, BenchmarkResult> run_serial_benchmarks(
             result_sink(result);
         }
             
-        
     }
 
     return serial_results;
