@@ -101,11 +101,6 @@ std::vector<double> cuda_stencil(
                 "CUDA Stencil: Kernel launch failed"
             );
 
-            cuda_check(
-                cudaDeviceSynchronize(),
-                "CUDA Stencil: Device synchronization failed"
-            );
-
             double* temp = d_A;
             d_A = d_B;
             d_B = temp;
@@ -168,4 +163,58 @@ std::vector<double> cuda_stencil_wrapper(
     ctx.flop_count = 4.0 * (r - 2) * (c - 2) * iterations;
 
     return result;
+}
+
+BENCHMARK_TEST(stencil_cuda_n32x32_iter10,
+               stencil_n32x32_iter10,
+               Paradigm::CUDA) {
+    cuda_stencil_wrapper(ctx, 32, 32, 10);
+}
+
+BENCHMARK_TEST(stencil_cuda_n64x64_iter10,
+               stencil_n64x64_iter10,
+               Paradigm::CUDA) {
+    cuda_stencil_wrapper(ctx, 64, 64, 10);
+}
+
+BENCHMARK_TEST(stencil_cuda_n128x128_iter10,
+               stencil_n128x128_iter10,
+               Paradigm::CUDA) {
+    cuda_stencil_wrapper(ctx, 128, 128, 10);
+}
+
+BENCHMARK_TEST(stencil_cuda_n256x256_iter10,
+               stencil_n256x256_iter10,
+               Paradigm::CUDA) {
+    cuda_stencil_wrapper(ctx, 256, 256, 10);
+}
+
+BENCHMARK_TEST(stencil_cuda_n512x512_iter10,
+               stencil_n512x512_iter10,
+               Paradigm::CUDA) {
+    cuda_stencil_wrapper(ctx, 512, 512, 10);
+}
+
+BENCHMARK_TEST(stencil_cuda_n1024x1024_iter10,
+               stencil_n1024x1024_iter10,
+               Paradigm::CUDA) {
+    cuda_stencil_wrapper(ctx, 1024, 1024, 10);
+}
+
+BENCHMARK_TEST(stencil_cuda_n256x256_iter1,
+               stencil_n256x256_iter1,
+               Paradigm::CUDA) {
+    cuda_stencil_wrapper(ctx, 256, 256, 1);
+}
+
+BENCHMARK_TEST(stencil_cuda_n256x256_iter50,
+               stencil_n256x256_iter50,
+               Paradigm::CUDA) {
+    cuda_stencil_wrapper(ctx, 256, 256, 50);
+}
+
+BENCHMARK_TEST(stencil_cuda_n256x256_iter100,
+               stencil_n256x256_iter100,
+               Paradigm::CUDA) {
+    cuda_stencil_wrapper(ctx, 256, 256, 100);
 }
