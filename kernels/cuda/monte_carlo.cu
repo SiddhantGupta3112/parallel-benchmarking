@@ -6,7 +6,7 @@
 #include "registrar.h"
 #include "cuda_monte_carlo.h"
 
-# define THREADS_PER_BLOCK 256
+#define THREADS_PER_BLOCK 256
 
 __global__ void monte_carlo_kernel(unsigned long long seed, int N, int *count_inside_circle){
     int tid = blockIdx.x * blockDim.x + threadIdx.x;

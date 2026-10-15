@@ -13,8 +13,6 @@ std::unique_ptr<std::vector<double>> build_stencil_input(
         );
     }
 
-    int total_elements = r * c;
-
     std::mt19937 gen(seed);
     std::uniform_real_distribution<double> dis(0.0, 1.0);
 

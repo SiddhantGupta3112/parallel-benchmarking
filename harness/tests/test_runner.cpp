@@ -25,7 +25,7 @@ TEST_CASE("Error when serial benchmark missing") {
     REQUIRE_THROWS_AS(run_non_serial_benchmarks(map, {}, local_registry), std::runtime_error);
 }
 
-TEST_CASE("Error when no benchamrk registered at all") {
+TEST_CASE("Error when no benchmark registered at all") {
     Registry local_registry;
 
     REQUIRE_THROWS_AS(get_serial_benchmarks(local_registry), std::runtime_error);

@@ -26,7 +26,7 @@ std::unordered_map<std::string, RegisteredBenchmark> get_serial_benchmarks(Regis
     std::vector<RegisteredBenchmark>& benchmarks = registry.access_registered_benchmarks();
 
     if(benchmarks.empty()){
-        throw std::runtime_error("No benchmarks registed for benchmarking");
+        throw std::runtime_error("No benchmarks registered for benchmarking");
     }
 
     std::unordered_map<std::string, RegisteredBenchmark> serial_benchmarks;
@@ -116,7 +116,7 @@ std::vector<BenchmarkResult> run_non_serial_benchmarks(
         }
 
         if(serial_benchmarks.find(benchmark.kernel_name) == serial_benchmarks.end()){
-            throw std::runtime_error("No serial benchamrk found for " + benchmark.kernel_name);
+            throw std::runtime_error("No serial benchmark found for " + benchmark.kernel_name);
         }
 
         const BenchmarkResult& serial_benchmark = serial_benchmarks.at(benchmark.kernel_name);

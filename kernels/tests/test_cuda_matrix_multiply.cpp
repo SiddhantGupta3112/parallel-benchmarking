@@ -3,6 +3,7 @@
 #include "matrix_multiply.h"
 #include <stdexcept>
 #include <vector>
+#include <cmath>
 
 TEST_CASE("Cuda matrix multiplication with identity matrix") {
     std::vector<double> A = {
