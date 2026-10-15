@@ -13,8 +13,8 @@
 #endif
 
 void start_measurement_helper(Timer& timer, CpuMetrics& cpu_metrics){
-    timer.start();
     cpu_metrics.start();
+    timer.start();
 }
 
 void stop_measurement_helper(Timer& timer, CpuMetrics& cpu_metrics){
