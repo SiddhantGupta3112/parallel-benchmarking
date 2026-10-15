@@ -4,6 +4,7 @@
 #include<optional>
 
 enum class Paradigm {
+    Unset,
     Serial,
     OpenMP,
     MPI,
@@ -13,10 +14,10 @@ enum class Paradigm {
 struct BenchmarkResult{
     //config fields
     std::string name; 
-    Paradigm paradigm; 
-    int problem_size;
-    int iterations;
-    int number_of_processors;
+    Paradigm paradigm = Paradigm::Unset; 
+    int problem_size = 1;
+    int iterations = 0;
+    int number_of_processors = 0;
 
     //compulsory fields;
     double wall_time_ms = 0.0;
