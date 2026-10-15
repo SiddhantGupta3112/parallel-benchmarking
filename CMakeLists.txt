@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.20)
 
 project(parallel_benchmarking LANGUAGES CXX)
 
@@ -42,12 +42,10 @@ if(ENABLE_CUDA)
 
     if(CMAKE_CUDA_COMPILER)
 
-        set(
-            CMAKE_CUDA_ARCHITECTURES
-            86
-            CACHE STRING
-            "CUDA architectures to build for"
-        )
+        if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+            set(CMAKE_CUDA_ARCHITECTURES 86 CACHE STRING
+                "CUDA architectures to build for")
+        endif()
 
         enable_language(CUDA)
 
