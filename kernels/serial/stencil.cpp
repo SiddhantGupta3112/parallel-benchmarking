@@ -72,7 +72,7 @@ std::vector<double> stencil_wrapper(
         throw std::runtime_error("Iterations cannot be negative");
     }
 
-    std::vector<double> input = std::move(*build_stencil_input(rows, cols, STENCIL));
+    std::vector<double> input = std::move(*build_stencil_input(rows, cols, STENCIL_SEED));
 
     ctx.start_measurement();
 

@@ -34,6 +34,7 @@ double monte_carlo_cuda(BenchmarkContext &ctx, int N){
     ctx.iterations = 1;
     ctx.number_of_processors = get_number_of_processors(N);
 
+    ctx.start_measurement();
     int blocks_per_grid = (N + THREADS_PER_BLOCK - 1) / THREADS_PER_BLOCK;
 
     int h_count_inside_circle = 0;
@@ -62,9 +63,12 @@ double monte_carlo_cuda(BenchmarkContext &ctx, int N){
 
         ctx.flop_count = 3 * N;
         ctx.bytes_moved = 2.0 * N * sizeof(float);
+        
 
         cuda_check(cudaFree(d_count_inside_circle), "Failed to free device memory for count inside circle");
         d_count_inside_circle = nullptr;
+
+        ctx.stop_measurement();
         return pi;
     }
     catch(...){

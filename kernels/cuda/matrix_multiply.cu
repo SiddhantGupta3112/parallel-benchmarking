@@ -94,8 +94,8 @@ std::vector<double> cuda_matrix_multiplication_wrapper(
     int r2,
     int c2
 ) {
-    std::vector<double> h_A = std::move(*build_matrix(r1, c1, MATRIX_MULTIPLY_A));
-    std::vector<double> h_B = std::move(*build_matrix(r2, c2, MATRIX_MULTIPLY_B));
+    std::vector<double> h_A = std::move(*build_matrix(r1, c1, MATRIX_MULTIPLY_A_SEED));
+    std::vector<double> h_B = std::move(*build_matrix(r2, c2, MATRIX_MULTIPLY_B_SEED));
 
     ctx.iterations = 1;
     ctx.problem_size = r1 * c2;

@@ -150,7 +150,7 @@ std::vector<double> cuda_stencil_wrapper(
     ctx.problem_size = r * c;
     ctx.number_of_processors = get_number_of_processors(r * c);
 
-    std::vector<double> input = std::move(*build_stencil_input(r, c, STENCIL));
+    std::vector<double> input = std::move(*build_stencil_input(r, c, STENCIL_SEED));
 
     ctx.start_measurement();
 

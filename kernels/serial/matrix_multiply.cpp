@@ -29,12 +29,14 @@ std::vector<double> matrix_multiply(
         static_cast<std::size_t>(r1) * c2, 0.0
     );
 
-    for (int i = 0; i < r1; i++) {
-        for (int j = 0; j < c2; j++) {
-            for (int k = 0; k < c1; k++) {
+    // Serial matrix multiplication using i-k-j loop order
+    // to improve row-major cache locality.
+
+    for (int i = 0; i < r1; ++i) {
+        for (int k = 0; k < c1; ++k) {
+            for (int j = 0; j < c2; ++j) {
                 C[i * c2 + j] +=
-                    A[i * c1 + k] *
-                    B[k * c2 + j];
+                    A[i * c1 + k] * B[k * c2 + j];
             }
         }
     }
@@ -50,8 +52,8 @@ std::vector<double> matrix_multiplication_wrapper(
     int c2
 ) {
     
-    std::vector<double> A = std::move(*build_matrix(r1, c1, MATRIX_MULTIPLY_A));
-    std::vector<double> B = std::move(*build_matrix(r2, c2, MATRIX_MULTIPLY_B));
+    std::vector<double> A = std::move(*build_matrix(r1, c1, MATRIX_MULTIPLY_A_SEED));
+    std::vector<double> B = std::move(*build_matrix(r2, c2, MATRIX_MULTIPLY_B_SEED));
 
     ctx.start_measurement();
 
