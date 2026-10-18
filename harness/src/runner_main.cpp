@@ -43,15 +43,6 @@ namespace {
         return "results/" + timestamp.str() + ".csv";
     }
 
-    void merge_benchmarks(
-        std::vector<BenchmarkResult>& results,
-        const std::unordered_map<std::string, BenchmarkResult>& serial_benchmarks
-    ) {
-        for (const auto& [name, result] : serial_benchmarks) {
-            results.push_back(result);
-        }
-    }
-
     int parse_integer(const char* value) {
         std::string input(value);
         std::size_t pos = 0;
@@ -177,7 +168,6 @@ int main(int argc, char* argv[]) {
             run_serial_benchmarks(settings, csv_sink);
         std::vector<BenchmarkResult> results =
             run_non_serial_benchmarks(settings, serial_benchmarks, csv_sink);
-        //merge_benchmarks(results, serial_benchmarks);
 
         std::cout << "Serial benchmarks run: " << serial_benchmarks.size() << "\n";
         std::cout << "Total benchmarks run: " << results.size() << "\n";

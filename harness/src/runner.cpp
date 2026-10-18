@@ -30,39 +30,26 @@ void stop_measurement_helper(Timer& timer, CpuMetrics& cpu_metrics) {
 
 namespace {
 
-std::string make_run_name(
-    const std::string& benchmark_name,
-    bool is_warmup,
-    int run_index,
-    const BenchmarkSettings& settings
-) {
-    if (settings.warmup == 0 &&
-        settings.repetitions == 1 &&
-        !is_warmup) {
-        return benchmark_name;
-    }
-
-    if (is_warmup) {
-        return benchmark_name + "_warmup_" +
-               std::to_string(run_index + 1);
-    }
-
-    return benchmark_name + "_run_" +
-           std::to_string(run_index + 1);
-}
-
-
 BenchmarkResult collect_result(
     const RegisteredBenchmark& benchmark,
     BenchmarkContext& context,
     Timer& timer,
     CpuMetrics& cpu_metrics,
-    const std::string& result_name
+    const std::string& result_name,
+    bool is_warmup,
+    int run_index
 ) {
     BenchmarkResult result;
 
     result.name = result_name;
+    result.kernel_name = benchmark.kernel_name;
     result.paradigm = benchmark.paradigm;
+
+    result.run_type = is_warmup
+        ? RunType::Warmup
+        : RunType::Core;
+
+    result.rep_index = run_index;
 
     result.number_of_processors = context.number_of_processors;
     result.problem_size = context.problem_size;
@@ -78,14 +65,16 @@ BenchmarkResult collect_result(
         context.bytes_moved
     );
 
-    // Speedup and efficiency are placeholders for serial benchmarks.
     result.speedup = 1.0;
     result.efficiency = 1.0;
+
+    result.flop_count = context.flop_count;
+    result.bytes_moved = context.bytes_moved;
 
     return result;
 }
 
-} // namespace
+} 
 
 
 std::unordered_map<std::string, RegisteredBenchmark>
@@ -156,19 +145,16 @@ run_serial_benchmarks(
                 ? i
                 : i - settings.warmup;
 
-            const std::string result_name = make_run_name(
-                benchmark.name,
-                is_warmup_run,
-                run_index,
-                settings
-            );
+            const std::string result_name = benchmark.name;
 
             BenchmarkResult result = collect_result(
                 benchmark,
                 context,
                 timer,
                 cpu_metrics,
-                result_name
+                result_name,
+                is_warmup_run,
+                run_index
             );
 
 
@@ -262,19 +248,16 @@ std::vector<BenchmarkResult> run_non_serial_benchmarks(
                 ? i
                 : i - settings.warmup;
 
-            const std::string result_name = make_run_name(
-                benchmark.name,
-                is_warmup_run,
-                run_index,
-                settings
-            );
+            const std::string result_name = benchmark.name;
 
             BenchmarkResult result = collect_result(
                 benchmark,
                 context,
                 timer,
                 cpu_metrics,
-                result_name
+                result_name,
+                is_warmup_run,
+                run_index
             );
 
 #ifdef HAS_CUDA

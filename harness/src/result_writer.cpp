@@ -6,6 +6,8 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <iomanip>
+#include <limits>
 
 namespace{
     std::string paradigm_to_string(Paradigm paradigm) {
@@ -22,14 +24,25 @@ namespace{
                 return "UNKNOWN";
         }
     }
+
+    std::string run_type_to_string(RunType type) {
+    switch (type) {
+        case RunType::Warmup: return "warmup";
+        case RunType::Core:   return "core";
+        default:              return "unset";
+    }
+}
 }
 
 void write_raw_data_header(std::ofstream& file) {
-    file << "name,paradigm,problem_size,iterations,number_of_processors,"
-            "wall_time_ms,speedup,efficiency,achieved_flops,"
-            "arithmetic_intensity,cpu_time_ms,peak_rss_kb,"
-            "gpu_utilization_pct,gpu_memory_used_mb,"
-            "gpu_memory_throughput_gbps,mpi_comm_overhead_fraction\n";
+    file
+        << "name,kernel_name,paradigm,run_type,rep_index,"
+        << "problem_size,iterations,number_of_processors,"
+        << "wall_time_ms,speedup,efficiency,achieved_flops,"
+        << "arithmetic_intensity,cpu_time_ms,peak_rss_kb,"
+        << "flop_count,bytes_moved,"
+        << "gpu_utilization_pct,gpu_memory_used_mb,"
+        << "gpu_memory_throughput_gbps,mpi_comm_overhead_fraction\n";
 
     if (!file) {
         throw std::runtime_error("Failed to write CSV header");
@@ -42,7 +55,10 @@ void write_result_row(
 ) {
     file
         << "\"" << result.name << "\","
+        << "\"" << result.kernel_name << "\","
         << "\"" << paradigm_to_string(result.paradigm) << "\","
+        << "\"" << run_type_to_string(result.run_type) << "\","
+        << result.rep_index << ","
         << result.problem_size << ","
         << result.iterations << ","
         << result.number_of_processors << ","
@@ -52,23 +68,33 @@ void write_result_row(
         << result.achieved_flops << ","
         << result.arithmetic_intensity << ","
         << result.cpu_time_ms << ","
-        << result.peak_rss_kb << ",";
+        << result.peak_rss_kb << ","
+        << result.flop_count << ","
+        << result.bytes_moved << ",";
 
-    if (result.gpu_utilization_pct.has_value())
+    if (result.gpu_utilization_pct.has_value()) {
         file << result.gpu_utilization_pct.value();
+    }
 
     file << ",";
 
-    if (result.gpu_memory_used_mb.has_value())
+    if (result.gpu_memory_used_mb.has_value()) {
         file << result.gpu_memory_used_mb.value();
+    }
 
     file << ",";
 
-    if (result.gpu_memory_throughput_gbps.has_value())
+    if (result.gpu_memory_throughput_gbps.has_value()) {
         file << result.gpu_memory_throughput_gbps.value();
+    }
 
-    // MPI communication overhead is not implemented yet.
-    file << ",\n";
+    file << ",";
+
+    if (result.mpi_comm_overhead_fraction.has_value()) {
+        file << result.mpi_comm_overhead_fraction.value();
+    }
+
+    file << '\n';
 
     if (!file) {
         throw std::runtime_error(
@@ -88,6 +114,10 @@ std::ofstream open_file(
             "Failed to open output file: " + filename
         );
     }
+
+    file << std::setprecision(
+        std::numeric_limits<double>::max_digits10
+    );
 
     return file;
 }
