@@ -6,6 +6,7 @@ add_library(harness STATIC
     src/live_monitor.cpp
     src/runner.cpp
     src/result_writer.cpp
+    src/metadata_collector.cpp
 )
 
 target_include_directories(

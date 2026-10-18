@@ -27,6 +27,8 @@ Makefile
 # Runtime output — keep the directory, not generated results
 results/*.json
 results/*.csv
+results/*.meta.txt
+results/*.patch
 !results/.gitkeep
 
 # Editor / OS cruft
