@@ -2,16 +2,12 @@
 #include "cuda_monte_carlo.h"
 
 TEST_CASE("CUDA Monte Carlo pi calculations within reasonable error bounds") {
-    BenchmarkContext ctx;
-
-    double pi = monte_carlo_cuda(ctx, 10000);
+    double pi = monte_carlo_cuda(10000);
     REQUIRE(pi > 3.1);
     REQUIRE(pi < 3.2);
 }
 
 TEST_CASE("CUDA MONTE CARLO rejects non-positive N") {
-    BenchmarkContext ctx;
-
-    REQUIRE_THROWS_AS(monte_carlo_cuda(ctx, 0), std::invalid_argument);
-    REQUIRE_THROWS_AS(monte_carlo_cuda(ctx, -100), std::invalid_argument);
+    REQUIRE_THROWS_AS(monte_carlo_cuda(0), std::invalid_argument);
+    REQUIRE_THROWS_AS(monte_carlo_cuda(-100), std::invalid_argument);
 }

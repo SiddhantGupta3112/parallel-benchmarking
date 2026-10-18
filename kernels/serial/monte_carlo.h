@@ -3,6 +3,6 @@
 
 #include "benchmark_context.h"
 
-double monte_carlo(BenchmarkContext &ctx, int N);
+double monte_carlo(int N);
 
 #endif

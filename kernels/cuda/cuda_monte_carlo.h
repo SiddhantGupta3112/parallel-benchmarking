@@ -3,6 +3,6 @@
 
 #include "benchmark_context.h"
 
-double monte_carlo_cuda(BenchmarkContext &ctx, int N);
+double monte_carlo_cuda(int N);
 
 #endif

@@ -1,14 +1,17 @@
-#include "runner.h"
 #include <catch2/catch_test_macros.hpp>
 #include <unordered_map>
 #include <thread>
 #include <chrono>
 #include <cmath> 
 
+#include "runner.h"
+#include "benchmark_settings.h"
+
 TEST_CASE("Error when serial benchmark missing") {
     std::unordered_map<std::string, BenchmarkResult> map;
-
+    BenchmarkSettings settings;
     Registry local_registry;
+
     local_registry.register_benchmark(
         "matrix_multiply_serial",
         "matrix_multiply",
@@ -22,17 +25,19 @@ TEST_CASE("Error when serial benchmark missing") {
         }
     );
 
-    REQUIRE_THROWS_AS(run_non_serial_benchmarks(map, {}, local_registry), std::runtime_error);
+    REQUIRE_THROWS_AS(run_non_serial_benchmarks(settings, map, {}, local_registry), std::runtime_error);
 }
 
 TEST_CASE("Error when no benchmark registered at all") {
     Registry local_registry;
+    
 
     REQUIRE_THROWS_AS(get_serial_benchmarks(local_registry), std::runtime_error);
 }
 
 TEST_CASE("Error when benchmarks exists but no Serial") {
     Registry local_registry;
+
     local_registry.register_benchmark(
         "matrix_multiply_serial",
         "matrix_multiply",
@@ -52,6 +57,7 @@ TEST_CASE("Error when benchmarks exists but no Serial") {
 TEST_CASE("End-to-end runner smoke test") {
     constexpr const char* kernel_name = "runner_smoke_test_kernel";
     Registry local_registry;
+    BenchmarkSettings settings;
 
     local_registry.register_benchmark(
         "runner_smoke_serial",
@@ -79,7 +85,7 @@ TEST_CASE("End-to-end runner smoke test") {
         }
     );
 
-    auto serial_results = run_serial_benchmarks({}, local_registry);
+    auto serial_results = run_serial_benchmarks(settings, {}, local_registry);
     
     REQUIRE(serial_results.find(kernel_name) != serial_results.end());
 
@@ -98,7 +104,7 @@ TEST_CASE("End-to-end runner smoke test") {
     REQUIRE(serial_result.peak_rss_kb > 0);
 
     auto parallel_results =
-        run_non_serial_benchmarks(serial_results, nullptr, local_registry);
+        run_non_serial_benchmarks(settings, serial_results, {}, local_registry);
 
     REQUIRE(parallel_results.size() == 1);
 
@@ -125,6 +131,7 @@ TEST_CASE("End-to-end runner smoke test") {
 
 TEST_CASE("Restarting measurement excludes setup time") {
     Registry local_registry;
+    BenchmarkSettings settings;
 
     local_registry.register_benchmark(
         "setup_then_measure",
@@ -168,7 +175,7 @@ TEST_CASE("Restarting measurement excludes setup time") {
         }
     );
 
-    auto results = run_serial_benchmarks(nullptr, local_registry);
+    auto results = run_serial_benchmarks(settings, {}, local_registry);
 
     const double setup_time =
         results.at("setup_then_measure").wall_time_ms;
