@@ -114,3 +114,59 @@ std::vector<double> cuda_matrix_multiplication_wrapper(
 
     return h_C;
 }
+
+BENCHMARK_TEST(matrix_multiplication_CUDA_n32x32, matrix_multiplication_n32x32, Paradigm::CUDA) {
+    cuda_matrix_multiplication_wrapper(ctx, 32, 32, 32, 32);
+}
+
+BENCHMARK_TEST(matrix_multiplication_CUDA_n64x64, matrix_multiplication_n64x64, Paradigm::CUDA) {
+    cuda_matrix_multiplication_wrapper(ctx, 64, 64, 64, 64);
+}
+
+BENCHMARK_TEST(matrix_multiplication_CUDA_n128x128, matrix_multiplication_n128x128, Paradigm::CUDA) {
+    cuda_matrix_multiplication_wrapper(ctx, 128, 128, 128, 128);
+}
+
+BENCHMARK_TEST(matrix_multiplication_CUDA_n256x256, matrix_multiplication_n256x256, Paradigm::CUDA) {
+    cuda_matrix_multiplication_wrapper(ctx, 256, 256, 256, 256);
+}
+
+BENCHMARK_TEST(matrix_multiplication_CUDA_n384x384, matrix_multiplication_n384x384, Paradigm::CUDA) {
+    cuda_matrix_multiplication_wrapper(ctx, 384, 384, 384, 384);
+}
+
+BENCHMARK_TEST(matrix_multiplication_CUDA_n512x512, matrix_multiplication_n512x512, Paradigm::CUDA) {
+    cuda_matrix_multiplication_wrapper(ctx, 512, 512, 512, 512);
+}
+
+BENCHMARK_TEST(matrix_multiplication_CUDA_n768x768, matrix_multiplication_n768x768, Paradigm::CUDA) {
+    cuda_matrix_multiplication_wrapper(ctx, 768, 768, 768, 768);
+}
+
+BENCHMARK_TEST(matrix_multiplication_CUDA_n1024x1024, matrix_multiplication_n1024x1024, Paradigm::CUDA) {
+    cuda_matrix_multiplication_wrapper(ctx, 1024, 1024, 1024, 1024);
+}
+
+BENCHMARK_TEST(matrix_multiplication_CUDA_n1536x1536, matrix_multiplication_n1536x1536, Paradigm::CUDA) {
+    cuda_matrix_multiplication_wrapper(ctx, 1536, 1536, 1536, 1536);
+}
+
+BENCHMARK_TEST(matrix_multiplication_CUDA_n2048x2048, matrix_multiplication_n2048x2048, Paradigm::CUDA) {
+    cuda_matrix_multiplication_wrapper(ctx, 2048, 2048, 2048, 2048);
+}
+
+BENCHMARK_TEST(matrix_multiplication_CUDA_rect_128x256_256x64, matrix_multiplication_rect_128x256_256x64, Paradigm::CUDA) {
+    cuda_matrix_multiplication_wrapper(ctx, 128, 256, 256, 64);
+}
+
+BENCHMARK_TEST(matrix_multiplication_CUDA_rect_64x128_128x256, matrix_multiplication_rect_64x128_128x256, Paradigm::CUDA) {
+    cuda_matrix_multiplication_wrapper(ctx, 64, 128, 128, 256);
+}
+
+BENCHMARK_TEST(matrix_multiplication_CUDA_rect_256x64_64x128, matrix_multiplication_rect_256x64_64x128, Paradigm::CUDA) {
+    cuda_matrix_multiplication_wrapper(ctx, 256, 64, 64, 128);
+}
+
+BENCHMARK_TEST(matrix_multiplication_CUDA_rect_32x256_256x32, matrix_multiplication_rect_32x256_256x32, Paradigm::CUDA) {
+    cuda_matrix_multiplication_wrapper(ctx, 32, 256, 256, 32);
+}

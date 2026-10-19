@@ -88,8 +88,28 @@ BENCHMARK_TEST(matrix_multiplication_serial_n256x256, matrix_multiplication_n256
     matrix_multiplication_wrapper(ctx, 256, 256, 256, 256);
 }
 
+BENCHMARK_TEST(matrix_multiplication_serial_n384x384, matrix_multiplication_n384x384, Paradigm::Serial) {
+    matrix_multiplication_wrapper(ctx, 384, 384, 384, 384);
+}
+
 BENCHMARK_TEST(matrix_multiplication_serial_n512x512, matrix_multiplication_n512x512, Paradigm::Serial) {
     matrix_multiplication_wrapper(ctx, 512, 512, 512, 512);
+}
+
+BENCHMARK_TEST(matrix_multiplication_serial_n768x768, matrix_multiplication_n768x768, Paradigm::Serial) {
+    matrix_multiplication_wrapper(ctx, 768, 768, 768, 768);
+}
+
+BENCHMARK_TEST(matrix_multiplication_serial_n1024x1024, matrix_multiplication_n1024x1024, Paradigm::Serial) {
+    matrix_multiplication_wrapper(ctx, 1024, 1024, 1024, 1024);
+}
+
+BENCHMARK_TEST(matrix_multiplication_serial_n1536x1536, matrix_multiplication_n1536x1536, Paradigm::Serial) {
+    matrix_multiplication_wrapper(ctx, 1536, 1536, 1536, 1536);
+}
+
+BENCHMARK_TEST(matrix_multiplication_serial_n2048x2048, matrix_multiplication_n2048x2048, Paradigm::Serial) {
+    matrix_multiplication_wrapper(ctx, 2048, 2048, 2048, 2048);
 }
 
 BENCHMARK_TEST(matrix_multiplication_serial_rect_128x256_256x64, matrix_multiplication_rect_128x256_256x64, Paradigm::Serial) {

@@ -101,7 +101,7 @@ double monte_carlo_cuda(int N) {
 }
 
 // Benchmark wrapper: manages measurement and metadata.
-double monte_carlo_cuda_wrapper(BenchmarkContext& ctx, int N) {
+double cuda_monte_carlo_wrapper(BenchmarkContext& ctx, int N) {
     if (N <= 0) {
         throw std::invalid_argument("N must be a positive integer.");
     }
@@ -130,18 +130,54 @@ double monte_carlo_cuda_wrapper(BenchmarkContext& ctx, int N) {
     return pi;
 }
 
-BENCHMARK_TEST(monte_carlo_cuda_n10000, monte_carlo_n10000, Paradigm::CUDA) {
-    monte_carlo_cuda_wrapper(ctx, 10'000);
+BENCHMARK_TEST(monte_carlo_CUDA_n10000, monte_carlo_n10000, Paradigm::CUDA) {
+    cuda_monte_carlo_wrapper(ctx, 10'000);
 }
 
-BENCHMARK_TEST(monte_carlo_cuda_n100000, monte_carlo_n100000, Paradigm::CUDA) {
-    monte_carlo_cuda_wrapper(ctx, 100'000);
+BENCHMARK_TEST(monte_carlo_CUDA_n20000, monte_carlo_n20000, Paradigm::CUDA) {
+    cuda_monte_carlo_wrapper(ctx, 20'000);
 }
 
-BENCHMARK_TEST(monte_carlo_cuda_n1000000, monte_carlo_n1000000, Paradigm::CUDA) {
-    monte_carlo_cuda_wrapper(ctx, 1'000'000);
+BENCHMARK_TEST(monte_carlo_CUDA_n50000, monte_carlo_n50000, Paradigm::CUDA) {
+    cuda_monte_carlo_wrapper(ctx, 50'000);
 }
 
-BENCHMARK_TEST(monte_carlo_cuda_n10000000, monte_carlo_n10000000, Paradigm::CUDA) {
-    monte_carlo_cuda_wrapper(ctx, 10'000'000);
+BENCHMARK_TEST(monte_carlo_CUDA_n100000, monte_carlo_n100000, Paradigm::CUDA) {
+    cuda_monte_carlo_wrapper(ctx, 100'000);
+}
+
+BENCHMARK_TEST(monte_carlo_CUDA_n200000, monte_carlo_n200000, Paradigm::CUDA) {
+    cuda_monte_carlo_wrapper(ctx, 200'000);
+}
+
+BENCHMARK_TEST(monte_carlo_CUDA_n500000, monte_carlo_n500000, Paradigm::CUDA) {
+    cuda_monte_carlo_wrapper(ctx, 500'000);
+}
+
+BENCHMARK_TEST(monte_carlo_CUDA_n1000000, monte_carlo_n1000000, Paradigm::CUDA) {
+    cuda_monte_carlo_wrapper(ctx, 1'000'000);
+}
+
+BENCHMARK_TEST(monte_carlo_CUDA_n2000000, monte_carlo_n2000000, Paradigm::CUDA) {
+    cuda_monte_carlo_wrapper(ctx, 2'000'000);
+}
+
+BENCHMARK_TEST(monte_carlo_CUDA_n5000000, monte_carlo_n5000000, Paradigm::CUDA) {
+    cuda_monte_carlo_wrapper(ctx, 5'000'000);
+}
+
+BENCHMARK_TEST(monte_carlo_CUDA_n10000000, monte_carlo_n10000000, Paradigm::CUDA) {
+    cuda_monte_carlo_wrapper(ctx, 10'000'000);
+}
+
+BENCHMARK_TEST(monte_carlo_CUDA_n20000000, monte_carlo_n20000000, Paradigm::CUDA) {
+    cuda_monte_carlo_wrapper(ctx, 20'000'000);
+}
+
+BENCHMARK_TEST(monte_carlo_CUDA_n50000000, monte_carlo_n50000000, Paradigm::CUDA) {
+    cuda_monte_carlo_wrapper(ctx, 50'000'000);
+}
+
+BENCHMARK_TEST(monte_carlo_CUDA_n100000000, monte_carlo_n100000000, Paradigm::CUDA) {
+    cuda_monte_carlo_wrapper(ctx, 100'000'000);
 }

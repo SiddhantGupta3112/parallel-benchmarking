@@ -93,56 +93,58 @@ std::vector<double> stencil_wrapper(
     return result;
 }
 
-BENCHMARK_TEST(stencil_serial_n32x32_iter10,
-               stencil_n32x32_iter10,
-               Paradigm::Serial) {
+BENCHMARK_TEST(stencil_serial_n32x32_iter10, stencil_n32x32_iter10, Paradigm::Serial) {
     stencil_wrapper(ctx, 32, 32, 10);
 }
 
-BENCHMARK_TEST(stencil_serial_n64x64_iter10,
-               stencil_n64x64_iter10,
-               Paradigm::Serial) {
+BENCHMARK_TEST(stencil_serial_n64x64_iter10, stencil_n64x64_iter10, Paradigm::Serial) {
     stencil_wrapper(ctx, 64, 64, 10);
 }
 
-BENCHMARK_TEST(stencil_serial_n128x128_iter10,
-               stencil_n128x128_iter10,
-               Paradigm::Serial) {
+BENCHMARK_TEST(stencil_serial_n128x128_iter10, stencil_n128x128_iter10, Paradigm::Serial) {
     stencil_wrapper(ctx, 128, 128, 10);
 }
 
-BENCHMARK_TEST(stencil_serial_n256x256_iter10,
-               stencil_n256x256_iter10,
-               Paradigm::Serial) {
+BENCHMARK_TEST(stencil_serial_n256x256_iter10, stencil_n256x256_iter10, Paradigm::Serial) {
     stencil_wrapper(ctx, 256, 256, 10);
 }
 
-BENCHMARK_TEST(stencil_serial_n512x512_iter10,
-               stencil_n512x512_iter10,
-               Paradigm::Serial) {
+BENCHMARK_TEST(stencil_serial_n512x512_iter10, stencil_n512x512_iter10, Paradigm::Serial) {
     stencil_wrapper(ctx, 512, 512, 10);
 }
 
-BENCHMARK_TEST(stencil_serial_n1024x1024_iter10,
-               stencil_n1024x1024_iter10,
-               Paradigm::Serial) {
+BENCHMARK_TEST(stencil_serial_n1024x1024_iter10, stencil_n1024x1024_iter10, Paradigm::Serial) {
     stencil_wrapper(ctx, 1024, 1024, 10);
 }
 
-BENCHMARK_TEST(stencil_serial_n256x256_iter1,
-               stencil_n256x256_iter1,
-               Paradigm::Serial) {
+BENCHMARK_TEST(stencil_serial_n2048x2048_iter10, stencil_n2048x2048_iter10, Paradigm::Serial) {
+    stencil_wrapper(ctx, 2048, 2048, 10);
+}
+
+BENCHMARK_TEST(stencil_serial_n4096x4096_iter10, stencil_n4096x4096_iter10, Paradigm::Serial) {
+    stencil_wrapper(ctx, 4096, 4096, 10);
+}
+
+BENCHMARK_TEST(stencil_serial_n256x256_iter1, stencil_n256x256_iter1, Paradigm::Serial) {
     stencil_wrapper(ctx, 256, 256, 1);
 }
 
-BENCHMARK_TEST(stencil_serial_n256x256_iter50,
-               stencil_n256x256_iter50,
-               Paradigm::Serial) {
+BENCHMARK_TEST(stencil_serial_n256x256_iter50, stencil_n256x256_iter50, Paradigm::Serial) {
     stencil_wrapper(ctx, 256, 256, 50);
 }
 
-BENCHMARK_TEST(stencil_serial_n256x256_iter100,
-               stencil_n256x256_iter100,
-               Paradigm::Serial) {
+BENCHMARK_TEST(stencil_serial_n256x256_iter100, stencil_n256x256_iter100, Paradigm::Serial) {
     stencil_wrapper(ctx, 256, 256, 100);
+}
+
+BENCHMARK_TEST(stencil_serial_n1024x1024_iter1, stencil_n1024x1024_iter1, Paradigm::Serial) {
+    stencil_wrapper(ctx, 1024, 1024, 1);
+}
+
+BENCHMARK_TEST(stencil_serial_n1024x1024_iter50, stencil_n1024x1024_iter50, Paradigm::Serial) {
+    stencil_wrapper(ctx, 1024, 1024, 50);
+}
+
+BENCHMARK_TEST(stencil_serial_n1024x1024_iter100, stencil_n1024x1024_iter100, Paradigm::Serial) {
+    stencil_wrapper(ctx, 1024, 1024, 100);
 }
