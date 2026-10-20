@@ -26,3 +26,43 @@ endif()
 
 include(Catch)
 catch_discover_tests(kernel_tests)
+add_executable(
+    mpi_matrix_multiply_tests
+    test_mpi_matrix_multiply.cpp
+)
+
+target_link_libraries(
+    mpi_matrix_multiply_tests
+    PRIVATE
+        mpi_kernels
+        serial_kernels
+        helper
+        Catch2::Catch2
+        MPI::MPI_CXX
+)
+add_executable(
+    mpi_monte_carlo_tests
+    test_mpi_monte_carlo.cpp
+)
+
+target_link_libraries(
+    mpi_monte_carlo_tests
+    PRIVATE
+        mpi_kernels
+        Catch2::Catch2
+        MPI::MPI_CXX
+)
+
+add_executable(
+    mpi_stencil_tests
+    test_mpi_stencil.cpp
+)
+
+target_link_libraries(
+    mpi_stencil_tests
+    PRIVATE
+        mpi_kernels
+        serial_kernels
+        Catch2::Catch2
+        MPI::MPI_CXX
+)
