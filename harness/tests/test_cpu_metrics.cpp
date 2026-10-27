@@ -4,11 +4,11 @@
 TEST_CASE("CPU time greater than 0"){
     CpuMetrics metrics;
 
-    long long sum = 0;
+    volatile long long sum = 0;
     long n = 100000000;
     metrics.start();
     for(int i = 0; i <= n; i++){
-        sum += i;
+        sum = sum + i;
     }
 
     metrics.stop();

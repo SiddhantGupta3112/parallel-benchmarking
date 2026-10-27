@@ -18,6 +18,7 @@ public:
     int problem_size = 0;
     int number_of_processors = 0;
     int iterations = 0;
+    double mpi_communication_time_ms = 0.0;
 
     void assign_measurement_functions(
         std::function<void()> start_func,

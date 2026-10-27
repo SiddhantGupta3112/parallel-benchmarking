@@ -96,10 +96,34 @@ target_link_libraries(benchmark_runner
     PRIVATE
         harness
         openmp_kernels
-        mpi_kernels
         serial_kernels
+)
+
+target_compile_definitions(benchmark_runner
+    PRIVATE
+        PB_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
+        PB_BUILD_DIR="${CMAKE_BINARY_DIR}"
 )
 
 if(HAS_CUDA)
     target_link_libraries(benchmark_runner PRIVATE cuda_kernels)
 endif()
+
+add_executable(
+    mpi_benchmark_runner
+    harness/src/mpi_runner_main.cpp
+)
+
+target_link_libraries(mpi_benchmark_runner
+    PRIVATE
+        harness
+        mpi_kernels
+        helper
+        MPI::MPI_CXX
+)
+
+target_compile_definitions(mpi_benchmark_runner
+    PRIVATE
+        PB_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
+        PB_BUILD_DIR="${CMAKE_BINARY_DIR}"
+)

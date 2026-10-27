@@ -8,9 +8,11 @@
 #include <ctime>
 #include <sstream>
 #include <iomanip>
+#include <unistd.h>
 
 #include "runner.h"
 #include "result_writer.h"
+#include "baseline_loader.h"
 #include "benchmark_settings.h"
 #include "metadata_collector.h"
 
@@ -53,7 +55,8 @@ namespace {
 
         std::ostringstream timestamp;
 
-        timestamp << std::put_time(&local_time, "%Y-%m-%d_%H-%M-%S");
+        timestamp << std::put_time(&local_time, "%Y-%m-%d_%H-%M-%S")
+          << "_pid" << getpid();
 
         return "results/" + timestamp.str() + ".csv";
     }
@@ -87,7 +90,7 @@ namespace {
         return result;
     }
 
-    int parse_arguments(int argc, char* argv[], BenchmarkSettings& settings) {
+    int parse_arguments(int argc, char* argv[], BenchmarkSettings& settings,std::string& baseline_file) {
         for (int i = 1; i < argc; ++i) {
             std::string arg = argv[i];
 
@@ -102,9 +105,19 @@ namespace {
                     << "  --help               Show this help message\n\n"
                     << "Environment:\n"
                     << "  PB_NOTE              Free-text note stored in the metadata file\n"
-                    << "                       (power mode, plugged in, apps closed, ...)\n";
+                    << "                       (power mode, plugged in, apps closed, ...)\n"
+                    << "  --baseline <file>   Load serial baseline CSV\n";
 
                 return PARSE_HELP;
+            }
+            if (arg == "--baseline") {
+                if (i + 1 >= argc) {
+                    std::cerr << "Error: Missing value for --baseline\n";
+                    return PARSE_ERROR;
+                }
+
+                baseline_file = argv[++i];
+                continue;
             }
 
             if (arg == "--repetitions" || arg == "--warmup") {
@@ -165,7 +178,8 @@ int main(int argc, char* argv[]) {
 
     try {
         BenchmarkSettings settings;
-        int parse_result = parse_arguments(argc, argv, settings);
+        std::string baseline_file;
+        int parse_result = parse_arguments(argc, argv, settings,baseline_file);
 
         if(parse_result == PARSE_ERROR){
             return 1;
@@ -215,8 +229,18 @@ int main(int argc, char* argv[]) {
         };
 
 
-        std::unordered_map<std::string, BenchmarkResult> serial_benchmarks =
-            run_serial_benchmarks(settings, csv_sink);
+        std::unordered_map<std::string, BenchmarkResult> serial_benchmarks;
+
+        if (baseline_file.empty()) {
+            serial_benchmarks = run_serial_benchmarks(settings, csv_sink);
+        } else {
+            serial_benchmarks = load_serial_baselines(baseline_file);
+
+            std::cout << "Loaded " << serial_benchmarks.size()
+                    << " serial baselines from: "
+                    << baseline_file << "\n";
+        }
+
         std::vector<BenchmarkResult> results =
             run_non_serial_benchmarks(settings, serial_benchmarks, csv_sink);
 
@@ -227,7 +251,13 @@ int main(int argc, char* argv[]) {
                       << "to the metadata file\n";
         }
 
-        std::cout << "Serial benchmarks run: " << serial_benchmarks.size() << "\n";
+        if (baseline_file.empty()) {
+            std::cout << "Serial benchmarks run: "
+                    << serial_benchmarks.size() << "\n";
+        } else {
+            std::cout << "Serial benchmark execution skipped; using loaded baselines.\n";
+        }
+
         std::cout << "Total benchmarks run: " << results.size() << "\n";
 
         std::cout << "Results written to: " << filename << "\n";

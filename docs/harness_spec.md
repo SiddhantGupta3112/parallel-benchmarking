@@ -6,26 +6,42 @@ This document is what you need to read before writing a benchmark. It covers the
 
 ## 1. Architecture overview
 
-Every benchmark — regardless of paradigm — self-registers into one global registry at program startup, using the `BENCHMARK_TEST` macro. A single runner binary (`benchmark_runner`) discovers everything registered, runs each benchmark through a common metrics-collection pipeline, computes derived metrics (speedup, efficiency, roofline inputs) against a matching serial baseline, and writes everything to a CSV file.
+The project uses two benchmark runners that share the harness, result schema,
+metrics infrastructure, and serial-baseline loading logic.
 
+- `benchmark_runner` executes serial benchmarks and the registered OpenMP
+  and CUDA benchmarks. CUDA support is conditional on the build configuration.
+  When `--baseline <file>` is supplied, it loads existing serial core
+  measurements instead of rerunning the serial benchmarks.
+- `mpi_benchmark_runner` is a separate MPI application. It initializes MPI,
+  selects benchmarks compatible with the launched MPI rank count, and runs
+  the selected MPI configurations against their serial baselines.
+
+The architecture is:
+
+```text
+kernels/serial/*.cpp
+        |
+        v
+   Serial baselines
+        |
+        +------------------------------+
+        |                              |
+        v                              v
+ benchmark_runner              mpi_benchmark_runner
+        |                              |
+        +-- OpenMP                      +-- MPI matrix multiplication
+        +-- CUDA (when enabled)         +-- MPI Monte Carlo
+                                       +-- MPI stencil
+        |                              |
+        +--------------+---------------+
+                       |
+                       v
+              Shared harness
+                       |
+                       v
+             CSV results + metadata
 ```
-kernels/serial/*.cpp   ─┐
-kernels/openmp/*.cpp   ─┼─ each self-registers via BENCHMARK_TEST
-kernels/mpi/*.cpp      ─┤
-kernels/cuda/*.cu      ─┘
-        │
-        ▼
-   benchmark_runner
-        │
-        ├─ runs every Serial benchmark first (baselines)
-        ├─ runs every non-Serial benchmark, measuring against its baseline
-        └─ writes results/<timestamp>.csv
-```
-
-You only ever write code in `kernels/<paradigm>/`. You never need to touch `harness/` to add a new benchmark.
-
----
-
 ## 2. The data model — `BenchmarkResult`
 
 One struct represents every benchmark's result, regardless of paradigm. Fields that don't apply to a given paradigm (e.g. GPU metrics for an OpenMP run) are `std::optional` and left empty rather than using a sentinel value like `-1` or `0`.
@@ -54,7 +70,7 @@ struct BenchmarkResult {
     std::optional<double> gpu_utilization_pct;
     std::optional<double> gpu_memory_used_mb;
     std::optional<double> gpu_memory_throughput_gbps;
-    std::optional<double> mpi_comm_overhead_fraction;  // NOT YET IMPLEMENTED — see §7
+    std::optional<double> mpi_comm_overhead_fraction;  // max per-rank MPI-call time / wall time; see §7
 };
 ```
 
@@ -126,35 +142,43 @@ For every registered benchmark, in order:
 8. **CUDA only:** populate `gpu_utilization_pct` and `gpu_memory_used_mb` (peak-over-time, via a background polling thread — a single end-of-run NVML snapshot would miss a memory spike mid-run).
 
 **Timing specifics:**
-- CPU/wall-clock timing uses `std::chrono::steady_clock` and `getrusage()`.
-- **CUDA kernel timing must use CUDA Events** (`cudaEventRecord`/`cudaEventElapsedTime`), not wall-clock — wall-clock around an async kernel launch does not correctly measure GPU execution time. *(Not yet wired into a CUDA kernel — see §7.)*
+
+- CPU and wall-clock timing use `std::chrono::steady_clock` and `getrusage()`.
+- The standard runner executes serial benchmarks first and uses their results as baselines for non-serial benchmarks, unless an existing baseline CSV is supplied with `--baseline <file>`.
+- The MPI runner is a separate application. It initializes MPI, selects registrations compatible with the launched rank count, and compares their results against serial baselines.
+- **MPI wall-clock time:** Communication performed inside the measured kernel, including scatter, broadcast, gather, and stencil halo exchange, contributes to the measured elapsed time.
+- **MPI CPU time:** The reported CPU time aggregates CPU consumption across MPI ranks. It represents aggregate process CPU time, not exclusively useful computation.
+- **MPI peak RSS:** The reported value represents the maximum per-process peak RSS across the ranks. RSS is a process-lifetime high-water mark, so an earlier memory-intensive benchmark may affect later measurements made within the same runner process.
+- **Monte Carlo randomness:** MPI ranks use rank-specific random-number streams. Results may therefore differ between process counts even when the total sample count is unchanged.
+- **CUDA timing:** CUDA event-based timing using `cudaEventRecord()` and `cudaEventElapsedTime()` is not yet implemented. CUDA wall-clock results should therefore be interpreted with this limitation in mind.
 
 ---
 
 ## 6. Output — CSV
 
 Every run produces `results/<timestamp>.csv`, one row per `BenchmarkResult`, columns matching the struct field order. `Paradigm` serializes as its string name (`"OpenMP"`, not an integer). Empty optional fields are empty cells (reads as `NaN` in pandas).
+Each runner invocation writes a CSV file under `results/` using a timestamp and process ID, for example `results/2026-10-28_00-03-24_pid15358.csv`. A metadata sidecar records the run settings and execution status. Each benchmark execution produces one row: warm-up runs use `run_type=warmup`, and measured runs use `run_type=core`. The `kernel_name` field identifies the computation and is used to match serial baselines.
 
 **Interpreting empty GPU-metric cells:**
 - Row's paradigm is **not** CUDA → empty is expected, means "not applicable."
 - Row's paradigm **is** CUDA → empty means the NVML query failed during collection. Worth investigating, not ignoring.
 
 **Column list:**
-```
-name,paradigm,problem_size,iterations,number_of_processors,
-wall_time_ms,speedup,efficiency,achieved_flops,arithmetic_intensity,
-cpu_time_ms,peak_rss_kb,
+
+```text
+name,kernel_name,paradigm,run_type,rep_index,problem_size,iterations,
+number_of_processors,wall_time_ms,speedup,efficiency,achieved_flops,
+arithmetic_intensity,cpu_time_ms,peak_rss_kb,flop_count,bytes_moved,
 gpu_utilization_pct,gpu_memory_used_mb,gpu_memory_throughput_gbps,
 mpi_comm_overhead_fraction
 ```
 
-JSON output and CLI flags (`--output=json`, `--only=<name>`) are planned but not yet implemented — see §8.
+The standard `benchmark_runner` supports `--baseline <file>`, `--repetitions <n>`, `--warmup <n>`, and `--help`. The MPI-specific `mpi_benchmark_runner` additionally supports `--list` and `--only <pattern>`. The `--only` option matches benchmark names containing the supplied pattern. Run each executable with `--help` for usage details.
 
 ---
 
 ## 7. Known gaps — read before assuming a metric works
-
-- **`mpi_comm_overhead_fraction` is never populated by anything yet.** It exists in the struct for schema stability, but no MPI kernel currently reports communication time. When you write the stencil/Jacobi kernel (the one that actually generates real communication overhead via halo exchange), you'll need to extend `BenchmarkContext` with a way to report time spent in `MPI_Send`/`MPI_Recv` separately from total compute time — this hasn't been designed yet.
+- **`mpi_comm_overhead_fraction` is populated for MPI results.** For each rank, the runner divides the accumulated elapsed time inside instrumented MPI calls by that rank's measured kernel wall time, then reports the maximum fraction across ranks. Instrumented calls cover communication and collective operations in the matrix multiplication, Monte Carlo, and stencil kernels. Because blocking calls can include waiting for other ranks, this metric reflects communication and synchronization overhead, not pure network-transfer time.
 - **CUDA kernel-event timing (`cudaEventRecord`/`cudaEventElapsedTime`) is not implemented.** Currently, a CUDA benchmark's `wall_time_ms` comes from the same host-side `Timer` every paradigm uses — which, per §5, is explicitly the wrong way to time an async GPU kernel launch. This needs a small stateful class (similar shape to `Timer`) before CUDA timing numbers can be trusted.
 - **GPU memory throughput (`gpu_memory_throughput_gbps`) and CUDA occupancy are not collected.** Throughput is derivable (bytes moved ÷ kernel time vs. hardware peak bandwidth) once event timing exists. Occupancy was deliberately scoped out — it needs profiler-level introspection, not worth the complexity for the current project stage.
 - **Load imbalance (per-thread/process variance) was deliberately cut from scope** — real instrumentation cost for a secondary metric, not core to the speedup/efficiency/roofline story.
