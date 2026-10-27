@@ -1,5 +1,6 @@
 #include "registrar.h"
 #include "mpi_matrix_multiply.h"
+#include "mpi_rank_counts.h"
 #include "build_matrix.h"
 #include "seed_values.h"
 
@@ -71,7 +72,9 @@ std::vector<double> matrix_multiply_mpi(
             "Root matrix dimensions do not match input data"
         );
     }
-
+// The root-side copy of B is included in the timed MPI kernel execution.
+// Account for this buffer-copy overhead when comparing MPI performance
+// against implementations that do not make an equivalent copy.
     std::vector<double> global_B(b_elements);
 
     if (rank == 0) {
@@ -290,9 +293,7 @@ constexpr MatrixMultiplyConfig matrix_configs[] = {
     {"rect_32x256_256x32", 32, 256, 256, 32}
 };
 
-constexpr int mpi_rank_counts[] = {
-    1, 2, 4, 8, 12, 16, 20
-};
+
 
 struct RegisterMatrixMultiplyMpiBenchmarks {
     RegisterMatrixMultiplyMpiBenchmarks() {
@@ -301,7 +302,7 @@ struct RegisterMatrixMultiplyMpiBenchmarks {
                 std::string("matrix_multiplication_") +
                 config.suffix;
 
-            for (int ranks : mpi_rank_counts) {
+            for (int ranks : MPI_RANK_COUNTS) {
                 const std::string benchmark_name =
                     std::string("matrix_multiplication_mpi_") +
                     config.suffix +

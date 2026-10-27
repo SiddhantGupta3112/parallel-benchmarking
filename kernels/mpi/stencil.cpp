@@ -8,6 +8,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include "mpi_rank_counts.h"
 
 std::vector<double> stencil_mpi(
     const std::vector<double>& input,
@@ -24,14 +25,25 @@ std::vector<double> stencil_mpi(
         throw std::runtime_error("Iterations cannot be negative");
     }
 
-    if (input.size() != static_cast<std::size_t>(rows) * cols) {
-        throw std::runtime_error("Matrix dimensions do not match data");
-    }
-
-    int rank = 0;
+        int rank = 0;
     int size = 1;
     MPI_Comm_rank(comm, &rank);
     MPI_Comm_size(comm, &size);
+
+    int valid_input = 1;
+
+    if (rank == 0) {
+        valid_input =
+            input.size() == static_cast<std::size_t>(rows) * cols;
+    }
+
+    MPI_Bcast(&valid_input, 1, MPI_INT, 0, comm);
+
+    if (!valid_input) {
+        throw std::runtime_error(
+            "Root matrix dimensions do not match input data"
+        );
+    }
 
     std::vector<int> row_counts(size);
     std::vector<int> row_displacements(size);
@@ -219,17 +231,45 @@ std::vector<double> stencil_mpi_wrapper(
         throw std::runtime_error("Iterations cannot be negative");
     }
 
+    int rank = 0;
     int size = 1;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    auto input = build_stencil_input(rows, cols, STENCIL_SEED);
+    std::vector<double> input;
+    int inputs_ready = 1;
+
+    if (rank == 0) {
+        try {
+            auto generated = build_stencil_input(
+                rows, cols, STENCIL_SEED
+            );
+
+            if (!generated) {
+                throw std::runtime_error("Stencil input generation failed");
+            }
+
+            input = std::move(*generated);
+        } catch (...) {
+            inputs_ready = 0;
+        }
+    }
+
+    MPI_Bcast(
+        &inputs_ready, 1, MPI_INT, 0, MPI_COMM_WORLD
+    );
+
+    if (!inputs_ready) {
+        throw std::runtime_error(
+            "Rank 0 failed to generate stencil input"
+        );
+    }
 
     ctx.start_measurement();
 
     std::vector<double> result = stencil_mpi(
-        *input, rows, cols, iterations, MPI_COMM_WORLD
+        input, rows, cols, iterations, MPI_COMM_WORLD
     );
-
     ctx.stop_measurement();
 
     ctx.iterations = iterations;
@@ -243,13 +283,14 @@ std::vector<double> stencil_mpi_wrapper(
     return result;
 }
 
+namespace{
 struct StencilConfig {
     int rows;
     int cols;
     int iterations;
 };
 
-namespace {
+
 void register_stencil_benchmarks() {
     const StencilConfig configs[] = {
         {32, 32, 10},
@@ -268,7 +309,6 @@ void register_stencil_benchmarks() {
         {1024, 1024, 100}
     };
 
-    const int rank_counts[] = {1, 2, 4, 8, 12, 16, 20};
 
     for (const auto& config : configs) {
         const std::string kernel_name =
@@ -276,7 +316,7 @@ void register_stencil_benchmarks() {
             std::to_string(config.cols) + "_iter" +
             std::to_string(config.iterations);
 
-        for (int ranks : rank_counts) {
+        for (int ranks : MPI_RANK_COUNTS) {
             const std::string benchmark_name =
                 "stencil_mpi_n" + std::to_string(config.rows) + "x" +
                 std::to_string(config.cols) + "_iter" +

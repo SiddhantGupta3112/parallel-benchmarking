@@ -49,6 +49,7 @@ target_link_libraries(
     mpi_monte_carlo_tests
     PRIVATE
         mpi_kernels
+        serial_kernels
         Catch2::Catch2
         MPI::MPI_CXX
 )
@@ -66,3 +67,38 @@ target_link_libraries(
         Catch2::Catch2
         MPI::MPI_CXX
 )
+
+# Run MPI kernel tests with multiple process counts.
+foreach(np 1 2 3 4 7 8)
+    add_test(
+        NAME mpi_matrix_multiply_np${np}
+        COMMAND ${MPIEXEC_EXECUTABLE}
+                ${MPIEXEC_NUMPROC_FLAG} ${np}
+                ${MPIEXEC_PREFLAGS}
+                $<TARGET_FILE:mpi_matrix_multiply_tests>
+                ${MPIEXEC_POSTFLAGS}
+    )
+endforeach()
+
+
+foreach(np 1 2 3 4 7 8)
+    add_test(
+        NAME mpi_monte_carlo_np${np}
+        COMMAND ${MPIEXEC_EXECUTABLE}
+                ${MPIEXEC_NUMPROC_FLAG} ${np}
+                ${MPIEXEC_PREFLAGS}
+                $<TARGET_FILE:mpi_monte_carlo_tests>
+                ${MPIEXEC_POSTFLAGS}
+    )
+endforeach()
+
+foreach(np 1 2 3 4 7 8)
+    add_test(
+        NAME mpi_stencil_np${np}
+        COMMAND ${MPIEXEC_EXECUTABLE}
+                ${MPIEXEC_NUMPROC_FLAG} ${np}
+                ${MPIEXEC_PREFLAGS}
+                $<TARGET_FILE:mpi_stencil_tests>
+                ${MPIEXEC_POSTFLAGS}
+    )
+endforeach()

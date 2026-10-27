@@ -3,6 +3,7 @@
 #include "seed_values.h"
 
 #include <mpi.h>
+#include "mpi_rank_counts.h"
 #include "registrar.h"
 
 #include <cstdint>
@@ -138,9 +139,6 @@ constexpr MonteCarloConfig monte_carlo_configs[] = {
     {"n100000000", 100'000'000}
 };
 
-constexpr int mpi_rank_counts[] = {
-    1, 2, 4, 8, 12, 16, 20
-};
 
 struct RegisterMonteCarloMpiBenchmarks {
     RegisterMonteCarloMpiBenchmarks() {
@@ -148,7 +146,7 @@ struct RegisterMonteCarloMpiBenchmarks {
             const std::string kernel_name =
                 std::string("monte_carlo_") + config.suffix;
 
-            for (int ranks : mpi_rank_counts) {
+            for (int ranks : MPI_RANK_COUNTS) {
                 const std::string benchmark_name =
                     std::string("monte_carlo_mpi_") +
                     config.suffix +

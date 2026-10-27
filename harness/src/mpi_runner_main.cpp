@@ -20,6 +20,7 @@
 #include <unistd.h>
 
 #include "benchmark_context.h"
+#include "baseline_loader.h"
 #include "benchmark_settings.h"
 #include "cpu_metrics.h"
 #include "derived_metrics.h"
@@ -46,6 +47,8 @@ struct Options {
     int repetitions = BenchmarkSettings::DEFAULT_REPETITIONS;
     int warmup = BenchmarkSettings::DEFAULT_WARMUP;
     std::string baseline;
+    bool list_benchmarks = false;
+    std::string only_pattern;
 };
 
 int parse_integer(const std::string& input) {
@@ -70,6 +73,10 @@ int parse_arguments(
     try {
         for (int i = 1; i < argc; ++i) {
             std::string argument = argv[i];
+            if (argument == "--list") {
+                options.list_benchmarks = true;
+                continue;
+            }
 
             if (argument == "--help") {
                 if (rank == 0) {
@@ -77,10 +84,11 @@ int parse_arguments(
                         << "Usage: " << argv[0]
                         << " --baseline <serial.csv> [options]\n\n"
                         << "Options:\n"
-                        << "  --baseline <file>   Serial baseline CSV\n"
+                        << "  --baseline <file>   Serial baseline C SV\n"
                         << "  --repetitions <n>   Measured repetitions (1-1000)\n"
                         << "  --warmup <n>        Warm-up repetitions (0-1000)\n"
-                        << "  --help              Display this help\n";
+                        << "  --help              Display this help\n"
+                        << "  --only <pattern>    Run only MPI benchmarks whose names contain this pattern\n";
                 }
 
                 return 2;
@@ -88,7 +96,8 @@ int parse_arguments(
 
             if (argument != "--baseline" &&
                 argument != "--repetitions" &&
-                argument != "--warmup") {
+                argument != "--warmup" &&
+                argument != "--only") {
                 throw std::invalid_argument(
                     "Unknown argument: " + argument
                 );
@@ -104,6 +113,8 @@ int parse_arguments(
 
             if (argument == "--baseline") {
                 options.baseline = value;
+            } else if (argument == "--only") {
+                options.only_pattern = value;
             } else if (argument == "--repetitions") {
                 options.repetitions = parse_integer(value);
             } else {
@@ -111,7 +122,7 @@ int parse_arguments(
             }
         }
 
-        if (options.baseline.empty()) {
+        if (!options.list_benchmarks && options.baseline.empty()) {
             throw std::invalid_argument(
                 "--baseline is required"
             );
@@ -141,273 +152,6 @@ int parse_arguments(
 
         return 1;
     }
-}
-
-std::vector<std::string> parse_csv_line(
-    const std::string& line
-) {
-    std::vector<std::string> fields;
-    std::string field;
-    bool inside_quotes = false;
-
-    for (std::size_t i = 0; i < line.size(); ++i) {
-        char character = line[i];
-
-        if (character == '"') {
-            if (inside_quotes &&
-                i + 1 < line.size() &&
-                line[i + 1] == '"') {
-                field += '"';
-                ++i;
-            } else {
-                inside_quotes = !inside_quotes;
-            }
-        } else if (character == ',' && !inside_quotes) {
-            fields.push_back(field);
-            field.clear();
-        } else {
-            field += character;
-        }
-    }
-
-    if (inside_quotes) {
-        throw std::runtime_error(
-            "Malformed CSV: unterminated quoted field"
-        );
-    }
-
-    fields.push_back(field);
-
-    return fields;
-}
-
-const std::string& csv_field(
-    const std::vector<std::string>& fields,
-    const std::unordered_map<std::string, std::size_t>& columns,
-    const std::string& name
-) {
-    auto column = columns.find(name);
-
-    if (column == columns.end()) {
-        throw std::runtime_error(
-            "Missing CSV column: " + name
-        );
-    }
-
-    if (column->second >= fields.size()) {
-        throw std::runtime_error(
-            "CSV row is missing column: " + name
-        );
-    }
-
-    return fields[column->second];
-}
-
-double parse_double(const std::string& value) {
-    std::size_t position = 0;
-    double result = std::stod(value, &position);
-
-    if (position != value.size() || !std::isfinite(result)) {
-        throw std::runtime_error(
-            "Invalid numeric CSV value: " + value
-        );
-    }
-
-    return result;
-}
-
-int parse_csv_integer(const std::string& value) {
-    int result = parse_integer(value);
-    return result;
-}
-
-long parse_csv_long(const std::string& value) {
-    std::size_t position = 0;
-    long result = std::stol(value, &position);
-
-    if (position != value.size()) {
-        throw std::runtime_error(
-            "Invalid integer CSV value: " + value
-        );
-    }
-
-    return result;
-}
-
-using BaselineMap =
-    std::unordered_map<std::string, BenchmarkResult>;
-
-BaselineMap load_serial_baselines(
-    const std::string& filename
-) {
-    std::ifstream file(filename);
-
-    if (!file) {
-        throw std::runtime_error(
-            "Cannot open baseline CSV: " + filename
-        );
-    }
-
-    std::string line;
-
-    if (!std::getline(file, line)) {
-        throw std::runtime_error(
-            "Baseline CSV is empty"
-        );
-    }
-
-    if (!line.empty() && line.back() == '\r') {
-        line.pop_back();
-    }
-
-    const auto header = parse_csv_line(line);
-
-    std::unordered_map<std::string, std::size_t> columns;
-
-    for (std::size_t i = 0; i < header.size(); ++i) {
-        columns[header[i]] = i;
-    }
-
-    using BaselineSamples =
-        std::unordered_map<std::string, std::vector<BenchmarkResult>>;
-
-    BaselineSamples samples;
-
-    while (std::getline(file, line)) {
-        if (!line.empty() && line.back() == '\r') {
-            line.pop_back();
-        }
-
-        if (line.empty()) {
-            continue;
-        }
-
-        const auto fields = parse_csv_line(line);
-
-        const std::string& paradigm =
-            csv_field(fields, columns, "paradigm");
-
-        const std::string& run_type =
-            csv_field(fields, columns, "run_type");
-
-        if (paradigm != "Serial" || run_type != "core") {
-            continue;
-        }
-
-        BenchmarkResult result;
-
-        result.name = csv_field(fields, columns, "name");
-        result.kernel_name =
-            csv_field(fields, columns, "kernel_name");
-
-        result.paradigm = Paradigm::Serial;
-        result.run_type = RunType::Core;
-
-        result.rep_index = parse_csv_integer(
-            csv_field(fields, columns, "rep_index")
-        );
-
-        result.problem_size = parse_csv_integer(
-            csv_field(fields, columns, "problem_size")
-        );
-
-        result.iterations = parse_csv_integer(
-            csv_field(fields, columns, "iterations")
-        );
-
-        result.number_of_processors = parse_csv_integer(
-            csv_field(fields, columns, "number_of_processors")
-        );
-
-        result.wall_time_ms = parse_double(
-            csv_field(fields, columns, "wall_time_ms")
-        );
-
-        result.cpu_time_ms = parse_double(
-            csv_field(fields, columns, "cpu_time_ms")
-        );
-
-        result.peak_rss_kb = parse_csv_long(
-            csv_field(fields, columns, "peak_rss_kb")
-        );
-
-        result.flop_count = parse_double(
-            csv_field(fields, columns, "flop_count")
-        );
-
-        result.bytes_moved = parse_double(
-            csv_field(fields, columns, "bytes_moved")
-        );
-
-        if (result.wall_time_ms <= 0.0 ||
-            result.problem_size <= 0 ||
-            result.number_of_processors <= 0) {
-            throw std::runtime_error(
-                "Invalid Serial baseline for " +
-                result.kernel_name
-            );
-        }
-
-        samples[result.kernel_name].push_back(result);
-    }
-
-    if (samples.empty()) {
-        throw std::runtime_error(
-            "No Serial core measurements found in baseline CSV"
-        );
-    }
-
-    BaselineMap baselines;
-
-    for (auto& entry : samples) {
-        const std::string& kernel_name = entry.first;
-        auto& repetitions = entry.second;
-
-        std::vector<double> times;
-        times.reserve(repetitions.size());
-
-        const BenchmarkResult& first = repetitions.front();
-
-        for (const auto& repetition : repetitions) {
-            if (repetition.problem_size != first.problem_size ||
-                repetition.iterations != first.iterations) {
-                throw std::runtime_error(
-                    "Inconsistent Serial configurations for " +
-                    kernel_name
-                );
-            }
-
-            times.push_back(repetition.wall_time_ms);
-        }
-
-        std::sort(times.begin(), times.end());
-
-        const std::size_t middle = times.size() / 2;
-        double median;
-
-        if (times.size() % 2 == 0) {
-            median = (
-                times[middle - 1] + times[middle]
-            ) / 2.0;
-        } else {
-            median = times[middle];
-        }
-
-        BenchmarkResult baseline = first;
-        baseline.wall_time_ms = median;
-        baseline.speedup = 1.0;
-        baseline.efficiency = 1.0;
-
-        compute_achieved_metrics(
-            baseline,
-            baseline.flop_count,
-            baseline.bytes_moved
-        );
-
-        baselines.emplace(kernel_name, baseline);
-    }
-
-    return baselines;
 }
 
 std::string generate_file_name() {
@@ -502,7 +246,8 @@ void run_mpi_benchmarks(
     const BaselineMap& baselines,
     ResultSink result_sink,
     int rank,
-    int world_size
+    int world_size,
+    const std::string& only_pattern
 ) {
     const auto& registered =
         get_registry().access_registered_benchmarks();
@@ -510,7 +255,10 @@ void run_mpi_benchmarks(
     std::vector<RegisteredBenchmark> active;
 
     for (const auto& benchmark : registered) {
-        if (benchmark.paradigm != Paradigm::MPI) {
+        if (benchmark.paradigm != Paradigm::MPI) continue;
+
+        if (!only_pattern.empty() &&
+            benchmark.name.find(only_pattern) == std::string::npos) {
             continue;
         }
 
@@ -705,6 +453,27 @@ int main(int argc, char* argv[]) {
             MPI_Finalize();
             return 0;
         }
+        if (options.list_benchmarks) {
+            if (rank == 0) {
+                const auto& registered =
+                    get_registry().access_registered_benchmarks();
+
+                std::cout << "Registered MPI benchmarks:\n";
+
+                for (const auto& benchmark : registered) {
+                    if (benchmark.paradigm == Paradigm::MPI) {
+                        std::cout << "  "
+                                << benchmark.name
+                                << " (kernel: "
+                                << benchmark.kernel_name
+                                << ")\n";
+                    }
+                }
+            }
+
+            MPI_Finalize();
+            return 0;
+        }
 
         BenchmarkSettings settings;
         settings.repetitions = options.repetitions;
@@ -712,6 +481,52 @@ int main(int argc, char* argv[]) {
 
         const BaselineMap baselines =
             load_serial_baselines(options.baseline);
+
+        const auto& registered =
+    get_registry().access_registered_benchmarks();
+
+bool has_active_benchmark = false;
+
+for (const auto& benchmark : registered) {
+    if (benchmark.paradigm != Paradigm::MPI) {
+        continue;
+    }
+
+    if (!options.only_pattern.empty() &&
+        benchmark.name.find(options.only_pattern) == std::string::npos) {
+        continue;
+    }
+
+    const int required_ranks =
+        registered_rank_count(benchmark.name);
+
+    if (required_ranks != -1 && required_ranks != world_size) {
+        continue;
+    }
+
+    if (baselines.find(benchmark.kernel_name) == baselines.end()) {
+        throw std::runtime_error(
+            "No Serial baseline found for " + benchmark.kernel_name
+        );
+    }
+
+    has_active_benchmark = true;
+}
+
+if (!has_active_benchmark) {
+    if (options.only_pattern.empty()) {
+        throw std::runtime_error(
+            "No MPI benchmarks registered for " +
+            std::to_string(world_size) + " ranks"
+        );
+    }
+
+    throw std::runtime_error(
+        "No MPI benchmarks matched pattern '" +
+        options.only_pattern + "' for " +
+        std::to_string(world_size) + " ranks"
+    );
+}
 
         std::ofstream output_file;
 
@@ -778,7 +593,8 @@ int main(int argc, char* argv[]) {
             baselines,
             csv_sink,
             rank,
-            world_size
+            world_size,
+            options.only_pattern
         );
 
         MPI_Barrier(MPI_COMM_WORLD);
