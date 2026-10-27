@@ -70,7 +70,7 @@ struct BenchmarkResult {
     std::optional<double> gpu_utilization_pct;
     std::optional<double> gpu_memory_used_mb;
     std::optional<double> gpu_memory_throughput_gbps;
-    std::optional<double> mpi_comm_overhead_fraction;  // NOT YET IMPLEMENTED — see §7
+    std::optional<double> mpi_comm_overhead_fraction;  // max per-rank MPI-call time / wall time; see §7
 };
 ```
 
@@ -178,7 +178,7 @@ The standard `benchmark_runner` supports `--baseline <file>`, `--repetitions <n>
 ---
 
 ## 7. Known gaps — read before assuming a metric works
-- **`mpi_comm_overhead_fraction` is not yet populated.** The MPI matrix multiplication, Monte Carlo, and stencil kernels are implemented, and the stencil exchanges halo rows between ranks. However, the runner does not separately measure communication time and compute time to calculate this metric. Implementing it requires instrumentation for communication operations and a clearly defined calculation of communication overhead relative to the measured runtime. Until then, this CSV field remains empty for MPI results.
+- **`mpi_comm_overhead_fraction` is populated for MPI results.** For each rank, the runner divides the accumulated elapsed time inside instrumented MPI calls by that rank's measured kernel wall time, then reports the maximum fraction across ranks. Instrumented calls cover communication and collective operations in the matrix multiplication, Monte Carlo, and stencil kernels. Because blocking calls can include waiting for other ranks, this metric reflects communication and synchronization overhead, not pure network-transfer time.
 - **CUDA kernel-event timing (`cudaEventRecord`/`cudaEventElapsedTime`) is not implemented.** Currently, a CUDA benchmark's `wall_time_ms` comes from the same host-side `Timer` every paradigm uses — which, per §5, is explicitly the wrong way to time an async GPU kernel launch. This needs a small stateful class (similar shape to `Timer`) before CUDA timing numbers can be trusted.
 - **GPU memory throughput (`gpu_memory_throughput_gbps`) and CUDA occupancy are not collected.** Throughput is derivable (bytes moved ÷ kernel time vs. hardware peak bandwidth) once event timing exists. Occupancy was deliberately scoped out — it needs profiler-level introspection, not worth the complexity for the current project stage.
 - **Load imbalance (per-thread/process variance) was deliberately cut from scope** — real instrumentation cost for a secondary metric, not core to the speedup/efficiency/roofline story.

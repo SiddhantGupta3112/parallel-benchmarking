@@ -15,8 +15,12 @@ std::vector<double> stencil_mpi(
     int rows,
     int cols,
     int iterations,
-    MPI_Comm comm
+    MPI_Comm comm,
+    double* communication_time_ms
 ) {
+    if (communication_time_ms != nullptr) {
+    *communication_time_ms = 0.0;
+    }
     if (rows < 3 || cols < 3) {
         throw std::runtime_error("Stencil dimensions must be at least 3x3");
     }
@@ -37,7 +41,18 @@ std::vector<double> stencil_mpi(
             input.size() == static_cast<std::size_t>(rows) * cols;
     }
 
+    double validation_bcast_start = 0.0;
+
+    if (communication_time_ms != nullptr) {
+        validation_bcast_start = MPI_Wtime();
+    }
+
     MPI_Bcast(&valid_input, 1, MPI_INT, 0, comm);
+
+    if (communication_time_ms != nullptr) {
+        *communication_time_ms +=
+            (MPI_Wtime() - validation_bcast_start) * 1000.0;
+    }
 
     if (!valid_input) {
         throw std::runtime_error(
@@ -104,6 +119,11 @@ std::vector<double> stencil_mpi(
     }
 
     double dummy = 0.0;
+    double communication_start = 0.0;
+
+    if (communication_time_ms != nullptr) {
+        communication_start = MPI_Wtime();
+    }
 
     MPI_Scatterv(
         rank == 0 ? input.data() : &dummy,
@@ -116,6 +136,11 @@ std::vector<double> stencil_mpi(
         0,
         comm
     );
+
+    if (communication_time_ms != nullptr) {
+        *communication_time_ms +=
+            (MPI_Wtime() - communication_start) * 1000.0;
+    }
 
     for (int i = 0; i < local_rows; ++i) {
         int global_row = local_start + i;
@@ -137,6 +162,9 @@ std::vector<double> stencil_mpi(
 
     for (int iter = 0; iter < iterations; ++iter) {
         if (local_rows > 0) {
+            if (communication_time_ms != nullptr) {
+                communication_start = MPI_Wtime();
+            }
             MPI_Sendrecv(
                 local_current.data() + cols,
                 cols,
@@ -151,6 +179,14 @@ std::vector<double> stencil_mpi(
                 comm,
                 MPI_STATUS_IGNORE
             );
+            if (communication_time_ms != nullptr) {
+                *communication_time_ms +=
+                    (MPI_Wtime() - communication_start) * 1000.0;
+            }
+
+            if (communication_time_ms != nullptr) {
+                communication_start = MPI_Wtime();
+            }
 
             MPI_Sendrecv(
                 local_current.data() + local_rows * cols,
@@ -166,6 +202,11 @@ std::vector<double> stencil_mpi(
                 comm,
                 MPI_STATUS_IGNORE
             );
+
+            if (communication_time_ms != nullptr) {
+                *communication_time_ms +=
+                    (MPI_Wtime() - communication_start) * 1000.0;
+            }
 
             for (int i = 1; i <= local_rows; ++i) {
                 int global_row = local_start + i - 1;
@@ -201,6 +242,9 @@ std::vector<double> stencil_mpi(
     if (rank == 0) {
         result.resize(static_cast<std::size_t>(rows) * cols);
     }
+    if (communication_time_ms != nullptr) {
+        communication_start = MPI_Wtime();
+    }
 
     MPI_Gatherv(
         local_rows > 0 ? local_current.data() + cols : &dummy,
@@ -213,6 +257,11 @@ std::vector<double> stencil_mpi(
         0,
         comm
     );
+
+    if (communication_time_ms != nullptr) {
+        *communication_time_ms +=
+            (MPI_Wtime() - communication_start) * 1000.0;
+    }
 
     return result;
 }
@@ -267,9 +316,19 @@ std::vector<double> stencil_mpi_wrapper(
 
     ctx.start_measurement();
 
+    double communication_time_ms = 0.0;
+
     std::vector<double> result = stencil_mpi(
-        input, rows, cols, iterations, MPI_COMM_WORLD
+        input,
+        rows,
+        cols,
+        iterations,
+        MPI_COMM_WORLD,
+        &communication_time_ms
     );
+
+    ctx.mpi_communication_time_ms = communication_time_ms;
+
     ctx.stop_measurement();
 
     ctx.iterations = iterations;

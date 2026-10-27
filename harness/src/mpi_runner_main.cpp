@@ -340,11 +340,17 @@ void run_mpi_benchmarks(
                 cpu_metrics.get_cpu_time_ms();
 
             const long local_peak_rss =
-                cpu_metrics.get_peak_rss_kb();
+            cpu_metrics.get_peak_rss_kb();
+
+            const double local_communication_fraction =
+                local_wall_time > 0.0
+                    ? context.mpi_communication_time_ms / local_wall_time
+                    : 0.0;
 
             double maximum_wall_time = 0.0;
             double total_cpu_time = 0.0;
             long maximum_peak_rss = 0;
+            double maximum_communication_fraction = 0.0;
 
             MPI_Reduce(
                 &local_wall_time,
@@ -375,6 +381,15 @@ void run_mpi_benchmarks(
                 0,
                 MPI_COMM_WORLD
             );
+            MPI_Reduce(
+                &local_communication_fraction,
+                &maximum_communication_fraction,
+                1,
+                MPI_DOUBLE,
+                MPI_MAX,
+                0,
+                MPI_COMM_WORLD
+            );
 
             if (rank == 0) {
                 BenchmarkResult result;
@@ -398,6 +413,8 @@ void run_mpi_benchmarks(
                 result.wall_time_ms = maximum_wall_time;
                 result.cpu_time_ms = total_cpu_time;
                 result.peak_rss_kb = maximum_peak_rss;
+                result.mpi_comm_overhead_fraction =
+    maximum_communication_fraction;
 
                 result.flop_count = context.flop_count;
                 result.bytes_moved = context.bytes_moved;

@@ -12,7 +12,8 @@ std::vector<double> matrix_multiply_mpi(
     int c1,
     int r2,
     int c2,
-    MPI_Comm comm = MPI_COMM_WORLD
+    MPI_Comm comm = MPI_COMM_WORLD,
+    double* communication_time_ms = nullptr
 );
 
 std::vector<double> matrix_multiplication_mpi_wrapper(

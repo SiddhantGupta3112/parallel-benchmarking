@@ -56,5 +56,8 @@ The MPI benchmark runner selects configurations for the launched rank
 count and compares results against serial core baselines. Baselines use
 the median wall-clock time of the available serial core repetitions.
 
-The `mpi_comm_overhead_fraction` field is not yet populated. Separately
-measuring communication time and computation time remains future work.
+The `mpi_comm_overhead_fraction` field is populated by accumulating elapsed
+time around instrumented MPI calls on each rank, dividing by that rank's measured
+kernel wall time, and reporting the maximum fraction across ranks. Blocking calls
+can include waiting for other ranks, so interpret this as MPI communication and
+synchronization overhead, not pure network-transfer time.

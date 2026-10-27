@@ -6,7 +6,8 @@
 
 double monte_carlo_mpi(
     int N,
-    MPI_Comm comm = MPI_COMM_WORLD
+    MPI_Comm comm = MPI_COMM_WORLD,
+    double* communication_time_ms = nullptr
 );
 
 double monte_carlo_mpi_wrapper(

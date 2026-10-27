@@ -18,8 +18,13 @@ std::vector<double> matrix_multiply_mpi(
     int c1,
     int r2,
     int c2,
-    MPI_Comm comm
+    MPI_Comm comm,
+    double* communication_time_ms
 ) {
+
+    if (communication_time_ms != nullptr) {
+    *communication_time_ms = 0.0;
+    }
     if (r1 <= 0 || c1 <= 0 || r2 <= 0 || c2 <= 0) {
         throw std::runtime_error("Empty matrix");
     }
@@ -59,6 +64,12 @@ std::vector<double> matrix_multiply_mpi(
             B.size() == b_elements;
     }
 
+    double communication_start = 0.0;
+
+    if (communication_time_ms != nullptr) {
+        communication_start = MPI_Wtime();
+    }
+
     MPI_Bcast(
         &valid_inputs,
         1,
@@ -66,6 +77,11 @@ std::vector<double> matrix_multiply_mpi(
         0,
         comm
     );
+
+    if (communication_time_ms != nullptr) {
+        *communication_time_ms +=
+            (MPI_Wtime() - communication_start) * 1000.0;
+    }
 
     if (!valid_inputs) {
         throw std::runtime_error(
@@ -126,6 +142,10 @@ std::vector<double> matrix_multiply_mpi(
         0.0
     );
 
+    if (communication_time_ms != nullptr) {
+        communication_start = MPI_Wtime();
+    }
+
     MPI_Bcast(
         global_B.data(),
         static_cast<int>(b_elements),
@@ -133,6 +153,15 @@ std::vector<double> matrix_multiply_mpi(
         0,
         comm
     );
+
+    if (communication_time_ms != nullptr) {
+        *communication_time_ms +=
+            (MPI_Wtime() - communication_start) * 1000.0;
+    }
+
+    if (communication_time_ms != nullptr) {
+        communication_start = MPI_Wtime();
+    }
 
     MPI_Scatterv(
         rank == 0 ? A.data() : nullptr,
@@ -145,6 +174,11 @@ std::vector<double> matrix_multiply_mpi(
         0,
         comm
     );
+
+    if (communication_time_ms != nullptr) {
+        *communication_time_ms +=
+            (MPI_Wtime() - communication_start) * 1000.0;
+    }
 
     for (int i = 0; i < local_rows; ++i) {
         for (int k = 0; k < c1; ++k) {
@@ -162,6 +196,10 @@ std::vector<double> matrix_multiply_mpi(
         C.resize(c_elements);
     }
 
+    if (communication_time_ms != nullptr) {
+        communication_start = MPI_Wtime();
+    }
+
     MPI_Gatherv(
         local_C.data(),
         local_c_count,
@@ -174,6 +212,10 @@ std::vector<double> matrix_multiply_mpi(
         comm
     );
 
+    if (communication_time_ms != nullptr) {
+        *communication_time_ms +=
+            (MPI_Wtime() - communication_start) * 1000.0;
+    }
     return C;
 }
 
@@ -238,6 +280,8 @@ std::vector<double> matrix_multiplication_mpi_wrapper(
 
     ctx.start_measurement();
 
+    double communication_time_ms = 0.0;
+
     std::vector<double> C = matrix_multiply_mpi(
         A,
         B,
@@ -245,8 +289,11 @@ std::vector<double> matrix_multiplication_mpi_wrapper(
         c1,
         r2,
         c2,
-        MPI_COMM_WORLD
+        MPI_COMM_WORLD,
+        &communication_time_ms
     );
+
+    ctx.mpi_communication_time_ms = communication_time_ms;
 
     ctx.stop_measurement();
 

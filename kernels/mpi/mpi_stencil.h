@@ -10,7 +10,8 @@ std::vector<double> stencil_mpi(
     int rows,
     int cols,
     int iterations,
-    MPI_Comm comm = MPI_COMM_WORLD
+    MPI_Comm comm = MPI_COMM_WORLD,
+    double* communication_time_ms = nullptr
 );
 
 std::vector<double> stencil_mpi_wrapper(

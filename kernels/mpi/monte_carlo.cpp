@@ -10,11 +10,14 @@
 #include <random>
 #include <stdexcept>
 
-double monte_carlo_mpi(int N, MPI_Comm comm) {
+double monte_carlo_mpi(int N, MPI_Comm comm,double* communication_time_ms) {
     if (N <= 0) {
         throw std::invalid_argument(
             "N must be a positive integer."
         );
+    }
+    if (communication_time_ms != nullptr) {
+    *communication_time_ms = 0.0;
     }
 
     int rank;
@@ -50,7 +53,7 @@ double monte_carlo_mpi(int N, MPI_Comm comm) {
 
     // Combine all local counts on rank 0.
     long long total_count_inside = 0;
-
+    const double reduce_start = MPI_Wtime();
     MPI_Reduce(
         &local_count_inside,
         &total_count_inside,
@@ -60,6 +63,10 @@ double monte_carlo_mpi(int N, MPI_Comm comm) {
         0,
         comm
     );
+    if (communication_time_ms != nullptr) {
+    *communication_time_ms +=
+        (MPI_Wtime() - reduce_start) * 1000.0;
+}
 
     // Calculate the estimate on rank 0.
     double pi_estimate = 0.0;
@@ -68,7 +75,7 @@ double monte_carlo_mpi(int N, MPI_Comm comm) {
         pi_estimate =
             4.0 * static_cast<double>(total_count_inside) / N;
     }
-
+    const double broadcast_start = MPI_Wtime();
     // Make the estimate available on every rank.
     MPI_Bcast(
         &pi_estimate,
@@ -77,6 +84,11 @@ double monte_carlo_mpi(int N, MPI_Comm comm) {
         0,
         comm
     );
+
+    if (communication_time_ms != nullptr) {
+        *communication_time_ms +=
+            (MPI_Wtime() - broadcast_start) * 1000.0;
+    }
 
     return pi_estimate;
 }
@@ -102,10 +114,15 @@ double monte_carlo_mpi_wrapper(
 
     ctx.start_measurement();
 
+    double communication_time_ms = 0.0;
+
     const double pi = monte_carlo_mpi(
         N,
-        MPI_COMM_WORLD
+        MPI_COMM_WORLD,
+        &communication_time_ms
     );
+
+    ctx.mpi_communication_time_ms = communication_time_ms;
 
     ctx.stop_measurement();
 
