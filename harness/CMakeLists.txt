@@ -2,6 +2,7 @@ add_library(harness STATIC
     src/registrar.cpp
     src/derived_metrics.cpp
     src/cpu_metrics.cpp
+    src/baseline_loader.cpp
     src/scoped_timer.cpp
     src/live_monitor.cpp
     src/runner.cpp
