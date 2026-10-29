@@ -5,100 +5,72 @@ add_executable(
     test_serial_stencil.cpp
     test_build_matrix_helper.cpp
     test_build_stencil_input.cpp
+    test_openmp_helper.cpp
+    test_openmp_matrix_multiply.cpp
+    test_openmp_monte_carlo.cpp
+    test_openmp_stencil.cpp
 )
 
 target_link_libraries(
     kernel_tests
     PRIVATE
-    serial_kernels
-    helper
-    Catch2::Catch2WithMain
+        serial_kernels
+        helper
+        Catch2::Catch2WithMain
+        openmp_kernels
 )
 
 if(HAS_CUDA)
-    target_sources(kernel_tests PRIVATE 
-    test_cuda_monte_carlo.cpp
-    test_cuda_matrix_multiply.cpp
-    test_cuda_stencil.cpp
+    target_sources(
+        kernel_tests
+        PRIVATE
+            test_cuda_monte_carlo.cpp
+            test_cuda_matrix_multiply.cpp
+            test_cuda_stencil.cpp
     )
+
     target_link_libraries(kernel_tests PRIVATE cuda_kernels)
 endif()
 
 include(Catch)
 catch_discover_tests(kernel_tests)
-add_executable(
-    mpi_matrix_multiply_tests
-    test_mpi_matrix_multiply.cpp
+
+set(MPI_TEST_KERNELS
+    matrix_multiply
+    monte_carlo
+    stencil
 )
 
-target_link_libraries(
-    mpi_matrix_multiply_tests
-    PRIVATE
-        mpi_kernels
-        serial_kernels
-        helper
-        Catch2::Catch2
-        MPI::MPI_CXX
-)
-add_executable(
-    mpi_monte_carlo_tests
-    test_mpi_monte_carlo.cpp
-)
+foreach(kernel IN LISTS MPI_TEST_KERNELS)
+    set(test_target mpi_${kernel}_tests)
 
-target_link_libraries(
-    mpi_monte_carlo_tests
-    PRIVATE
-        mpi_kernels
-        serial_kernels
-        Catch2::Catch2
-        MPI::MPI_CXX
-)
+    add_executable(
+        ${test_target}
+        test_mpi_${kernel}.cpp
+    )
 
-add_executable(
-    mpi_stencil_tests
-    test_mpi_stencil.cpp
-)
+    target_link_libraries(
+        ${test_target}
+        PRIVATE
+            mpi_kernels
+            serial_kernels
+            Catch2::Catch2
+            MPI::MPI_CXX
+    )
 
-target_link_libraries(
-    mpi_stencil_tests
-    PRIVATE
-        mpi_kernels
-        serial_kernels
-        Catch2::Catch2
-        MPI::MPI_CXX
-)
+    if(kernel STREQUAL "matrix_multiply")
+        target_link_libraries(${test_target} PRIVATE helper)
+    endif()
 
-# Run MPI kernel tests with multiple process counts.
-foreach(np 1 2 3 4 7 8)
-    add_test(
-        NAME mpi_matrix_multiply_np${np}
-        COMMAND ${MPIEXEC_EXECUTABLE}
+    foreach(np IN ITEMS 1 2 3 4 7 8)
+        add_test(
+            NAME mpi_${kernel}_np${np}
+            COMMAND
+                ${MPIEXEC_EXECUTABLE}
                 ${MPIEXEC_NUMPROC_FLAG} ${np}
                 ${MPIEXEC_PREFLAGS}
-                $<TARGET_FILE:mpi_matrix_multiply_tests>
+                $<TARGET_FILE:${test_target}>
                 ${MPIEXEC_POSTFLAGS}
-    )
-endforeach()
-
-
-foreach(np 1 2 3 4 7 8)
-    add_test(
-        NAME mpi_monte_carlo_np${np}
-        COMMAND ${MPIEXEC_EXECUTABLE}
-                ${MPIEXEC_NUMPROC_FLAG} ${np}
-                ${MPIEXEC_PREFLAGS}
-                $<TARGET_FILE:mpi_monte_carlo_tests>
-                ${MPIEXEC_POSTFLAGS}
-    )
-endforeach()
-
-foreach(np 1 2 3 4 7 8)
-    add_test(
-        NAME mpi_stencil_np${np}
-        COMMAND ${MPIEXEC_EXECUTABLE}
-                ${MPIEXEC_NUMPROC_FLAG} ${np}
-                ${MPIEXEC_PREFLAGS}
-                $<TARGET_FILE:mpi_stencil_tests>
-                ${MPIEXEC_POSTFLAGS}
-    )
+        )
+    endforeach()
 endforeach()
