@@ -80,6 +80,9 @@ endif()
 
 
 add_subdirectory(harness)
+if(HAS_CUDA)
+    target_link_libraries(harness PUBLIC CUDA::cudart)
+endif()
 add_subdirectory(harness/tests)
 add_subdirectory(kernels/openmp)
 add_subdirectory(kernels/mpi)
@@ -104,6 +107,7 @@ target_compile_definitions(benchmark_runner
         PB_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
         PB_BUILD_DIR="${CMAKE_BINARY_DIR}"
 )
+
 
 if(HAS_CUDA)
     target_link_libraries(benchmark_runner PRIVATE cuda_kernels)
